@@ -1009,12 +1009,18 @@ namespace wx {
     }
 }
 
-wx.generateCssFile()
 
-const watcher = Deno.watchFs(".");
-for await (const event of watcher) {
-    // log(">>>> event", event);
-    if (event.kind == "modify" && event.paths.filter((m: string) => m.includes(".wxml")).length > 0) {
-        wx.generateCssFile()
+const main = async () => {
+    await wx.generateCssFile()
+    log("css service started")
+
+    const watcher = Deno.watchFs(".");
+    for await (const event of watcher) {
+        // log(">>>> event", event);
+        if (event.kind == "modify" && event.paths.filter((m: string) => m.includes(".wxml")).length > 0) {
+            wx.generateCssFile()
+        }
     }
 }
+
+main()
