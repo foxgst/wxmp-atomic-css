@@ -1,4 +1,5 @@
-import 'https://deno.land/x/arrays/mod.ts'
+import "https://deno.land/x/arrays/mod.ts";
+import "https://deno.land/std/fs/mod.ts";
 import {htmltok, TokenType} from 'https://deno.land/x/htmltok@v0.0.3/mod.ts';
 import * as css from "https://deno.land/x/css@0.3.0/mod.ts";
 
@@ -13,7 +14,7 @@ export namespace resource {
     export const primaryColor: string = "#1890ff"
 
     export const theme = {
-        "gray":['#ffffff', '#fafafa', '#f5f5f5', '#f0f0f0', '#d9d9d9', '#bfbfbf', '#8c8c8c', '#595959', '#434343', '#262626', '#1f1f1f', '#141414', '#000000'],
+        "gray": ['#ffffff', '#fafafa', '#f5f5f5', '#f0f0f0', '#d9d9d9', '#bfbfbf', '#8c8c8c', '#595959', '#434343', '#262626', '#1f1f1f', '#141414', '#000000'],
         "red": ["#fff1f0", "#ffccc7", "#ffa39e", "#ff7875", "#ff4d4f", "#f5222d", "#cf1322", "#a8071a", "#820014", "#5c0011"],
         "orange": ["#fff7e6", "#ffe7ba", "#ffd591", "#ffc069", "#ffa940", "#fa8c16", "#d46b08", "#ad4e00", "#873800", "#612500"],
         "yellow": ["#feffe6", "#ffffb8", "#fffb8f", "#fff566", "#ffec3d", "#fadb14", "#d4b106", "#ad8b00", "#876800", "#614700"],
@@ -664,21 +665,23 @@ export namespace style {
             const styleList: string[] = [];
             let unitList: string[] = []
             const ruleSetting = initRuleSetting(resource.DefaultStyles, Object.keys(DefaultConfig.theme));
-            log(`[config] read ${ruleSetting.ruleNames.length} rules`)
-            log(`[generate] prepare to generate css for ${classExprs.length} classItems`)
+            log(`[task] read ${ruleSetting.ruleNames.length} rules`)
+            log(`[task] try to generate [${classExprs.length}] styles`)
             const warnings: string[] = []
             classExprs.sort().forEach((classExpr: string, index: number) => {
                 const {units, styles} = makeCssForExpr(classExpr, ruleSetting, warnings)
                 const order = `${index + 1}/${classExprs.length}`.padStart(8, " ")
                 const unitString = units.length == 0 ? "" : `units = ${units.join(",")}`
-                log(`[generate] ${order}`, classExpr.padEnd(20, " "), unitString)
+                log(`[task] ${order}`, classExpr.padEnd(20, " "), unitString)
                 unitList.push(...units)
                 styleList.push(...styles)
             })
             unitList = unitList.compact().unique().sort()
-            log(`[generate] find ${unitList.length} units - `, unitList.join(","))
-            log(`[warning] total found ${warnings.length} warnings`)
-            warnings.forEach((m: string) => log(m))
+            log(`[task] found total [${unitList.length}] units [${unitList.join(",")}]`)
+            if(warnings.length > 0) {
+                log(`[warning] total found ${warnings.length} warnings`)
+                warnings.forEach((m: string) => log(m))
+            }
             const vars = generateVars(browser, unitList, [], config)
             return vars + "\n" + styleList.join("\n")
         } catch (e) {
@@ -892,7 +895,6 @@ export namespace style {
     const generateUnitVar = (unit: string, config: CssConfig): string => {
         if (unit == "") {
             return ""
-            throw Error("missing value")
         }
         if (unit == "full") {
             return "--unit-full: 100%;"
@@ -938,10 +940,19 @@ export namespace style {
 
 namespace wx {
 
-    const RootDir = "./miniprogram"
-    const ConfigFileName = `${RootDir}/app.json`
-    const CssOutputFileName = `${RootDir}/mini.wxss`
-    const CssInputFileNames = [`${RootDir}/font.wxss`, `${RootDir}/app.wxss`]
+    export interface FileConfig {
+        appConfigFile: string
+        cssMainFile: string
+        cssOutputFile: string
+        cssInputFiles: string[]
+    }
+
+    const DefaultConfig: FileConfig = {
+        appConfigFile: "app.json",
+        cssMainFile: "app.wxss",
+        cssOutputFile: "mini.wxss",
+        cssInputFiles: ["font.wxss"]
+    }
 
     const extraClassItem = (className: string): string[] => {
         if (className == "" || className.length < 2) {
@@ -958,69 +969,156 @@ namespace wx {
         return result.filter(m => m.length > 1 && !/[A-Z]/.test(m))
     }
 
-    const praseClassItemFromPage = (index: number, total: number, page: string, countMap: { [index: string]: number }): string[] => {
-        let classList: string[] = []
-        const xml = Deno.readTextFileSync(`${RootDir}/${page}.wxml`)
+    const parseClassItemFromPage = (page: string): string[] => {
+        let classNames: string[] = []
+        const xml = Deno.readTextFileSync(page)
         let attrName = ""
         for (const token of htmltok(xml)) {
             if (token.type == TokenType.ATTR_NAME) {
                 attrName = token.getValue()
             }
-            if ((attrName == "class" || attrName == "hover-class" || attrName == "placeholder-class") && token.type == TokenType.ATTR_VALUE) {
-                log(`[prepare] ${token.getValue()}`)
+            const isValidAttr = attrName == "class" || attrName == "hover-class" || attrName == "placeholder-class"
+            if (isValidAttr && token.type == TokenType.ATTR_VALUE) {
                 const items = extraClassItem(token.getValue())
-                items.forEach((s: string) => {
-                    countMap[s] = (countMap[s] || 0) + 1
-                    classList.push(s)
-                })
+                log(`[check]${"".padEnd(9, " ")}parse class attribute [${token.getValue()}] to [${items.join(",")}]`)
+                classNames.push(...items)
             }
         }
-        classList = classList.compact().unique()
-        const order = `${index + 1}/${total})`.padStart(7, ' ')
-        log(`[prepare] ${order} ${page.padEnd(45, ' ')} - prase ${classList.length} class items`)
-        return classList
+        return classNames.compact().unique()
     }
 
-    const readClassNamesFromCssFile = (cssFile: string): string[] => {
-        const cssContent = Deno.readTextFileSync(cssFile)
-        const ast = css.parse(cssContent);
-        return ast.stylesheet.rules
-            .filter((m: any) => m.type == "rule").map((m: any) => m.selectors).flat()
-            .filter((m: any) => m.startsWith(".")).map((m: any) => m.slice(1))
+    const readClassNamesFromCssFile = (cssFilePath: string): string[] | undefined => {
+        try {
+            const fileInfo = Deno.lstatSync(cssFilePath);
+            if (fileInfo.isFile) {
+                const cssContent = Deno.readTextFileSync(cssFilePath)
+                const ast = css.parse(cssContent);
+                return ast.stylesheet.rules
+                    .filter((m: any) => m.type == "rule").map((m: any) => m.selectors).flat()
+                    .filter((m: any) => m.startsWith(".")).map((m: any) => m.slice(1))
+            }
+            return undefined
+        } catch (e) {
+            return undefined
+        }
     }
 
-    export const generateCssFile = async (fileName: string = "", engine: (browserName: string, classItems: string[]) => string = style.generateCssContent) => {
-        const pages = await Deno.readTextFile(ConfigFileName)
+    export const generateCssFile = async (workDir: string, generateCount: number = false, config: FileConfig = DefaultConfig, engine: (browserName: string, classItems: string[]) => string = style.generateCssContent) => {
+
+        const pages = await Deno.readTextFile(`${workDir}/${config.appConfigFile}`)
             .then((data: string) => JSON.parse(data))
-            .then((app: any) => [...app.pages, ...app.subpackages.map((pkg: any) => pkg.pages.map((page: string) => `${pkg.root}/${page}`)).flat()])
-        log(`[prepare] prase ${ConfigFileName}, get ${pages.length} wxmp pages`)
-        const countMap: { [index: string]: number } = {}
-        pages.map((page: string, index: number) => praseClassItemFromPage(index, pages.length, page, countMap)).flat().sort()
-        const classItems = Object.keys(countMap)
+            .then((app: any) => [...app.pages, ...(app.subpackages || []).map((pkg: any) => pkg.pages.map((page: string) => `${pkg.root}/${page}`)).flat()])
+        log(`[check] read wechat mini program pages from config file, found [${pages.length}] pages`)
 
-        log(`[prepare] total ${classItems.length} class items from pages`)
-        const existsClasItems: string[] = CssInputFileNames.map(readClassNamesFromCssFile).flat().compact().unique()
-        log(`[prepare] found ${existsClasItems.length} class items in ${CssInputFileNames.join(",")}`)
-        const missingClassItems = classItems.diff(existsClasItems)
-        log(`[prepare] need to create ${missingClassItems.length} class items`)
-        let cssContent = engine("wx+xcx", missingClassItems)
-        await Deno.writeTextFile(fileName || CssOutputFileName, cssContent);
-        log(`[save] save ${cssContent.length} chars to ${fileName || CssOutputFileName}`)
+        const globalClassStyleNames: string[] = await [...config.cssInputFiles, config.cssMainFile].map((filename: string) => {
+            const result = readClassNamesFromCssFile(`${workDir}/${filename}`)
+            if (result == undefined) {
+                log(`[check] missing global css file [${filename}] and ignore`)
+            } else {
+                log(`[check] read global styles names, found [${result.length}] in [${filename}]`)
+            }
+            return result
+        }).flat().compact().unique()
+        log(`[check] found total [${globalClassStyleNames.length}] global class styles`)
+
+        let missingClassNames: string[] = []
+        pages.forEach((page: string, index: number) => {
+            const order = `${index + 1}/${pages.length})`.padStart(7, ' ')
+            const pageEmpty = "".padEnd(9, " ")
+
+            log(`[check] ${order} process page [${page}]`)
+
+            const classNames: string[] = parseClassItemFromPage(`${workDir}/${page}.wxml`)
+            log(`[check]${pageEmpty}found page class names [${classNames.length}] [${classNames.join(",")}]`)
+
+            const styleNames = readClassNamesFromCssFile(`${workDir}/${page}.wxss`)
+            if (styleNames == undefined) {
+                log(`[check]${pageEmpty}missing page class file [${page}.wxss] and ignore`)
+            } else {
+                log(`[check]${pageEmpty}found page style names [${styleNames.length}] [${styleNames.join(",")}]`)
+            }
+
+            const missingStyleNames = classNames.diff(styleNames).diff(globalClassStyleNames)
+            if (missingStyleNames.length == 0) {
+                log(`[check]${pageEmpty}no styles to create`)
+            } else {
+                log(`[check]${pageEmpty}need to create [${missingStyleNames.length}] styles [${missingStyleNames.join(",")}]`)
+                missingClassNames.push(...missingStyleNames)
+            }
+        })
+
+        const cssOutputFileName = `${workDir}/${config.cssOutputFile}`
+
+        missingClassNames = missingClassNames.unique()
+        if (missingClassNames.length == 0) {
+            log(`[check] no global styles to create`)
+            await Deno.writeTextFile(cssOutputFileName, "");
+            return
+        }
+
+        log(`[check] total to create [${missingClassNames.length}] global styles`)
+
+
+        let generatedClasItems: string[] = []
+        if (generateCount > 0) {
+            generatedClasItems = (readClassNamesFromCssFile(cssOutputFileName) || []).compact().unique()
+            log(`[check] found [${generatedClasItems.length}] style items in [${config.cssOutputFile}]`)
+        } else {
+            log(`[check] skip style names in [${config.cssOutputFile}]`)
+        }
+
+        missingClassNames = missingClassNames.diff(generatedClasItems)
+        if (missingClassNames.length == 0) {
+            log(`[check] no class items to create`)
+            return
+        }
+
+        log(`[task] create [${missingClassNames.length}] class items [${missingClassNames.join(",")}]`)
+
+        let cssContent = engine("wx+xcx", missingClassNames)
+
+        await Deno.writeTextFile(cssOutputFileName, cssContent, {
+            append: generateCount > 0,
+            create: generateCount == 0
+        });
+        log(`[task] save ${cssContent.length} chars to ${cssOutputFileName}`)
     }
 }
 
+const getWorkDir = async (): string => {
+    const MAIN_DIR: string = "miniprogram"
+    const MAIN_CSS: string = "app.wxss"
 
-const main = async () => {
-    await wx.generateCssFile()
-    log("css service started")
+    let workDir = Deno.args.length > 0 ? Deno.args[0] : "."
+    for await (const dirEntry of Deno.readDir(workDir)) {
+        if (dirEntry.name == MAIN_DIR) {
+            log(`working directory found for ${MAIN_DIR} at ${workDir}`)
+            return Promise.resolve(`${workDir}/${MAIN_DIR}`)
+        }
+        if (dirEntry.name == MAIN_CSS) {
+            log(`working directory found for ${MAIN_CSS} at ${workDir}`)
+            return Promise.resolve(workDir)
+        }
+    }
 
-    const watcher = Deno.watchFs(".");
+    log(`invalid working directory, can not found ${MAIN_CSS} or ${MAIN_DIR} directory`)
+    return Promise.reject("should set working directory to wechat mini program dir")
+}
+
+const main = async (workDir: string) => {
+    let count = 0
+
+    await wx.generateCssFile(workDir, count++)
+    log("[task] wxmp-atomic-css service started")
+
+    const watcher = Deno.watchFs(workDir);
     for await (const event of watcher) {
         // log(">>>> event", event);
         if (event.kind == "modify" && event.paths.filter((m: string) => m.includes(".wxml")).length > 0) {
-            wx.generateCssFile()
+            await wx.generateCssFile(workDir, 0)
+            log(`[task] wxmp-atomic-css refresh ${count}x`)
         }
     }
 }
 
-main()
+getWorkDir().then(main)
