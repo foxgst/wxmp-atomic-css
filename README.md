@@ -5,15 +5,19 @@ atomic css for wechat mini program, instant css content generator
 
 1 install deno
 
-`iwr https://deno.land/install.ps1 -useb | iex`
+```bash
+iwr https://deno.land/install.ps1 -useb | iex
+```
 
 2 open terminal and run script on the wechat mini program directory
 
-`deno run --allow-read --allow-write https://deno.land/x/wxmp_atomic_css@v0.0.3/worker.ts .`
+```bash
+deno run --allow-read --allow-write https://deno.land/x/wxmp_atomic_css@v0.0.3/worker.ts .
+```
 
 the result is  
 
-```
+``` text
 ❯ deno run --allow-read --allow-write https://deno.land/x/wxmp_atomic_css@v0.0.3/worker.ts .
 2022-9-20 2:48:2.198   working directory found for app.wxss at .
 2022-9-20 2:48:2.200   [check] read wechat mini program pages from config file, found [1] pages
