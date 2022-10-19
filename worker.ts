@@ -2,553 +2,13 @@ import "https://deno.land/x/arrays/mod.ts";
 import "https://deno.land/std/fs/mod.ts";
 import {htmltok, TokenType} from 'https://deno.land/x/htmltok@v0.0.3/mod.ts';
 import * as css from "https://deno.land/x/css@0.3.0/mod.ts";
+import {theme} from "./theme.ts";
+import {rule} from "./rule.ts"
 
 const log = (...args: any[]) => {
     const now = new Date()
     const at = `${now.getFullYear()}-${now.getMonth()}-${now.getDate() + 1} ${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}.${now.getMilliseconds()}`
     console.log(at.padEnd(22, " "), ...args)
-}
-
-export namespace resource {
-
-    export const primaryColor: string = "#1890ff"
-
-    export const theme = {
-        "gray": ['#ffffff', '#fafafa', '#f5f5f5', '#f0f0f0', '#d9d9d9', '#bfbfbf', '#8c8c8c', '#595959', '#434343', '#262626', '#1f1f1f', '#141414', '#000000'],
-        "red": ["#fff1f0", "#ffccc7", "#ffa39e", "#ff7875", "#ff4d4f", "#f5222d", "#cf1322", "#a8071a", "#820014", "#5c0011"],
-        "orange": ["#fff7e6", "#ffe7ba", "#ffd591", "#ffc069", "#ffa940", "#fa8c16", "#d46b08", "#ad4e00", "#873800", "#612500"],
-        "yellow": ["#feffe6", "#ffffb8", "#fffb8f", "#fff566", "#ffec3d", "#fadb14", "#d4b106", "#ad8b00", "#876800", "#614700"],
-        "green": ["#f6ffed", "#d9f7be", "#b7eb8f", "#95de64", "#73d13d", "#52c41a", "#389e0d", "#237804", "#135200", "#092b00"],
-        "blue": ["#e6f7ff", "#bae7ff", "#91d5ff", "#69c0ff", "#40a9ff", "#1890ff", "#096dd9", "#0050b3", "#003a8c", "#002766"],
-        "purple": ["#f9f0ff", "#efdbff", "#d3adf7", "#b37feb", "#9254de", "#722ed1", "#531dab", "#391085", "#22075e", "#120338"],
-        "magenta": ["#fff0f6", "#ffd6e7", "#ffadd2", "#ff85c0", "#f759ab", "#eb2f96", "#c41d7f", "#9e1068", "#780650", "#520339"],
-        "cyan": ["#e6fffb", "#b5f5ec", "#87e8de", "#5cdbd3", "#36cfc9", "#13c2c2", "#08979c", "#006d75", "#00474f", "#002329"],
-        "lime": ["#fcffe6", "#f4ffb8", "#eaff8f", "#d3f261", "#bae637", "#a0d911", "#7cb305", "#5b8c00", "#3f6600", "#254000"],
-        "gold": ["#fffbe6", "#fff1b8", "#ffe58f", "#ffd666", "#ffc53d", "#faad14", "#d48806", "#ad6800", "#874d00", "#613400"],
-        "volcano": ["#fff2e8", "#ffd8bf", "#ffbb96", "#ff9c6e", "#ff7a45", "#fa541c", "#d4380d", "#ad2102", "#871400", "#610b00"],
-    }
-    export const DefaultStyles = [
-        {
-            package: "spacing.padding.core",
-            syntax: "safe-bottom",
-            expr: "padding-bottom: env(safe-area-inset-bottom);"
-        },
-        {
-            package: "spacing.padding.ext",
-            syntax: "p-[U]",
-            compose: ['pl-[U]', 'pr-[U]', 'pt-[U]', 'pb-[U]']
-        },
-        {
-            package: "spacing.padding.ext",
-            desc: "padding-x-axis",
-            syntax: "px-[U]",
-            compose: ['pl-[U]', 'pr-[U]']
-        },
-        {
-            package: "spacing.padding.ext",
-            desc: "padding-y-axis",
-            syntax: "py-[U]",
-            compose: ['pt-[U]', 'pb-[U]']
-        },
-        {
-            package: "spacing.padding.ext",
-            syntax: "pt-[U]",
-            expr: "padding-top: var(--unit-[U]);"
-        },
-        {
-            package: "spacing.padding.ext",
-            syntax: "pb-[U]",
-            expr: "padding-bottom: var(--unit-[U]);"
-        },
-        {
-            package: "spacing.padding.ext",
-            syntax: "pl-[U]",
-            expr: "padding-left: var(--unit-[U]);"
-        },
-        {
-            package: "spacing.padding.ext",
-            syntax: "pr-[U]",
-            expr: "padding-right: var(--unit-[U]);"
-        },
-        {
-            package: "spacing.margin.ext",
-            syntax: "m-[U]",
-            compose: ['ml-[U]', 'mr-[U]', 'mt-[U]', 'mb-[U]']
-        },
-        {
-            package: "spacing.margin.ext",
-            desc: "margin-x-axis",
-            syntax: "mx-[U]",
-            compose: ['ml-[U]', 'mr-[U]']
-        },
-        {
-            package: "spacing.margin.ext",
-            desc: "margin-y-axis",
-            syntax: "my-[U]",
-            compose: ['mt-[U]', 'mb-[U]']
-        },
-        {
-            package: "spacing.margin.ext",
-            syntax: "mt-[U]",
-            expr: "margin-top: var(--unit-[U]);"
-        },
-        {
-            package: "spacing.margin.ext",
-            syntax: "mb-[U]",
-            expr: "margin-bottom: var(--unit-[U]);"
-        },
-        {
-            package: "spacing.margin.ext",
-            syntax: "ml-[U]",
-            expr: "margin-left: var(--unit-[U]);"
-        },
-        {
-            package: "spacing.margin.ext",
-            syntax: "mr-[U]",
-            expr: "margin-right: var(--unit-[U]);"
-        },
-        {
-            package: "sizing.size.ext",
-            syntax: "wh-screen",
-            compose: ['w-full', 'h-full', 'pos-abs', 'top-0', 'bottom-0', 'left-0', 'right-0']
-        },
-        {
-            package: "sizing.size.ext",
-            syntax: "wh-[U]",
-            compose: ['w-[U]', 'h-[U]']
-        },
-        {
-            package: "sizing.width.ext",
-            syntax: "w-[U]",
-            expr: "width: var(--unit-[U]);"
-        },
-        {
-            package: "sizing.width.ext",
-            syntax: "mw-[U]",
-            expr: "min-width: var(--unit-[U]);"
-        },
-        {
-            package: "sizing.width.ext",
-            syntax: "xw-[U]",
-            expr: "max-width: var(--unit-[U]);"
-        },
-        {
-            package: "sizing.height.ext",
-            syntax: "h-[U]",
-            expr: "height: var(--unit-[U]);"
-        },
-        {
-            package: "sizing.height.ext",
-            syntax: "mh-[U]",
-            expr: "min-height: var(--unit-[U]);"
-        },
-        {
-            package: "sizing.height.ext",
-            syntax: "xh-[U]",
-            expr: "max-height: var(--unit-[U]);"
-        },
-        {
-            package: "size.gap.ext",
-            syntax: "gap-[U]",
-            expr: "grid-gap: var(--unit-[U]);"
-        },
-        {
-            package: "layout.float.core",
-            syntax: "pos-abs",
-            expr: "position: absolute;"
-        },
-        {
-            package: "layout.float.core",
-            syntax: "pos-rel",
-            expr: "position: relative;"
-        },
-        {
-            package: "layout.float.core",
-            syntax: "pos-fix",
-            expr: "position: fixed;"
-        },
-        {
-            package: "layout.float.core",
-            syntax: "pos-sticky",
-            expr: "position: sticky;"
-        },
-        {
-            package: "layout.float.ext",
-            desc: "top left corner",
-            syntax: "pos-tl-[U]",
-            compose: ['pos-abs', 'top-[U]', 'left-[U]']
-        },
-        {
-            package: "layout.float.ext",
-            desc: "top right corner",
-            syntax: "pos-tr-[U]",
-            compose: ['pos-abs', 'top-[U]', 'right-[U]']
-        },
-        {
-            package: "layout.float.ext",
-            desc: "bottom left corner",
-            syntax: "pos-bl-[U]",
-            compose: ['pos-abs', 'bottom-[U]', 'left-[U]']
-        },
-        {
-            package: "layout.float.ext",
-            desc: "bottom right corner",
-            syntax: "pos-br-[U]",
-            compose: ['pos-abs', 'bottom-[U]', 'right-[U]']
-        },
-        {
-            package: "layout.float.ext",
-            syntax: "top-[U]",
-            expr: "top: var(--unit-[U]);"
-        },
-        {
-            package: "layout.float.ext",
-            syntax: "bottom-[U]",
-            expr: "bottom: var(--unit-[U]);"
-        },
-        {
-            package: "layout.float.ext",
-            syntax: "left-[U]",
-            expr: "left: var(--unit-[U]);"
-        },
-        {
-            package: "layout.float.ext",
-            syntax: "right-[U]",
-            expr: "right: var(--unit-[U]);"
-        },
-        {
-            package: "layout.float.ext",
-            syntax: "z-[U]",
-            expr: "z-Index: [U];"
-        },
-        {
-            package: "layout.flex.core",
-            syntax: "flex-row",
-            expr: "display: -webkit-box; display: -webkit-flex; display:flex; flex-direction: row;"
-        },
-        {
-            package: "layout.flex.core",
-            syntax: "flex-col",
-            expr: "display: -webkit-box; display: -webkit-flex; display:flex; flex-direction: column;"
-        },
-        {
-            package: "layout.flex.core",
-            syntax: "flex-row-r",
-            expr: "display: -webkit-box; display: -webkit-flex; display:flex; flex-direction: row-reverse;"
-        },
-        {
-            package: "layout.flex.core",
-            syntax: "flex-col-r",
-            expr: "display: -webkit-box; display: -webkit-flex; display:flex; flex-direction: column-reverse;"
-        },
-        {
-            package: "layout.flex.core",
-            syntax: "wrap",
-            expr: "flex-wrap: wrap;"
-        },
-        {
-            package: "layout.flex.core",
-            syntax: "flex-cc",
-            compose: ["flex-row", 'ai-center', 'jc-center']
-        },
-        {
-            package: "layout.flex.core",
-            syntax: "flex-lc",
-            compose: ["flex-row", 'ai-center', 'jc-start']
-        },
-        {
-            package: "layout.flex.core",
-            syntax: "flex-rc",
-            compose: ["flex-row", 'ai-center', 'jc-end']
-        },
-        {
-            package: "layout.flex.core",
-            syntax: "ai-start",
-            expr: "-webkit-box-align: start;-webkit-align-items: flex-start;align-items: flex-start;"
-        },
-        {
-            package: "layout.flex.core",
-            syntax: "ai-center",
-            expr: "-webkit-box-align: center;-webkit-align-items: center;align-items: center;"
-        },
-        {
-            package: "layout.flex.core",
-            syntax: "ai-end",
-            expr: "-webkit-box-align: end;-webkit-align-items: flex-end;align-items: flex-end;"
-        },
-        {
-            package: "layout.flex.core",
-            syntax: "jc-start",
-            expr: "-webkit-justify-content: flex-start; justify-content: flex-start;"
-        },
-        {
-            package: "layout.flex.core",
-            syntax: "jc-center",
-            expr: "-webkit-justify-content: center; justify-content: center;"
-        },
-        {
-            package: "layout.flex.core",
-            syntax: "jc-end",
-            expr: "-webkit-justify-content: flex-end; justify-content: flex-end;"
-        },
-        {
-            package: "layout.flex.core",
-            syntax: "jc-between",
-            expr: "-webkit-justify-content: space-between; justify-content: space-between;"
-        },
-        {
-            package: "layout.flex.core",
-            syntax: "jc-around",
-            expr: "-webkit-justify-content: space-around; justify-content: space-around;"
-        },
-        {
-            package: "layout.flex.core",
-            syntax: "jc-evenly",
-            expr: "-webkit-justify-content: space-evenly; justify-content: space-evenly;"
-        },
-        {
-            package: "layout.flex.ext",
-            syntax: "c[N]",
-            expr: "display:flex; -webkit-box-flex: [N]; -webkit-flex: [N]; flex: [N];"
-        },
-        {
-            package: "layout.grid.ext",
-            syntax: "grid-[N]c",
-            expr: "display:grid; grid-template-columns: repeat([N], minmax(0, 1fr));"
-        },
-        {
-            package: "text.size.ext",
-            syntax: "text-[U]",
-            expr: "font-size: var(--unit-[U]);"
-        },
-        {
-            package: "text.color.core",
-            syntax: "text-primary",
-            expr: "color: var(--color-primary);"
-        },
-        {
-            package: "text.color.core",
-            syntax: "text-white",
-            expr: "color: var(--color-white);"
-        },
-        {
-            package: "text.color.core",
-            syntax: "text-black",
-            expr: "color: var(--color-black);"
-        },
-        {
-            package: "text.color.ext",
-            syntax: "text-[C]-[N]-[A]",
-            expr: "color: var(--color-[C]-[N]-[A]);"
-        },
-        {
-            package: "text.color.ext",
-            syntax: "text-[C]-[N]",
-            expr: "color: var(--color-[C]-[N]);"
-        },
-        {
-            package: "text.effect.core",
-            syntax: "text-left",
-            expr: "text-align: left;"
-        },
-        {
-            package: "text.effect.core",
-            syntax: "text-center",
-            expr: "text-align: center;"
-        },
-        {
-            package: "text.effect.core",
-            syntax: "text-right",
-            expr: "text-align: right;"
-        },
-        {
-            package: "text.effect.core",
-            syntax: "text-break",
-            expr: "word-wrap: break-word; word-break: break-all;"
-        },
-        {
-            package: "text.effect.core",
-            syntax: "text-bold",
-            expr: "font-weight: bold;"
-        },
-        {
-            package: "text.effect.ext",
-            syntax: "text-normal",
-            expr: "font-weight: normal;"
-        },
-        {
-            package: "text.effect.core",
-            syntax: "text-line",
-            expr: "text-decoration: line-through;"
-        },
-        {
-            package: "text.effect.ext",
-            syntax: "text-line-p[N]",
-            expr: "line-height: [N]%"
-        },
-        {
-            package: "text.effect.ext",
-            syntax: "text-space-[U]",
-            expr: "letter-spacing: [U]"
-        },
-        {
-            package: "text.effect.ext",
-            syntax: "text-ellipsis",
-            expr: "overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
-        },
-        {
-            package: "text.effect.ext",
-            syntax: "text-uppercase",
-            expr: "text-transform: uppercase;"
-        },
-        {
-            package: "bg.color.core",
-            syntax: "bg-primary",
-            expr: "background-color: var(--color-primary);"
-        },
-        {
-            package: "bg.color.core",
-            syntax: "bg-white",
-            expr: "background-color: var(--color-white);"
-        },
-        {
-            package: "bg.color.core",
-            syntax: "bg-black",
-            expr: "background-color: var(--color-black);"
-        },
-        {
-            package: "bg.color.ext",
-            syntax: "bg-[C]-[N]",
-            expr: "background-color: var(--color-[C]-[N]);"
-        },
-        {
-            package: "bg.color.ext",
-            syntax: "bg-[C]-[N]-[A]",
-            expr: "background-color: var(--color-[C]-[N]-[A]);"
-        },
-        {
-            package: "effect.round.core",
-            syntax: "round",
-            expr: "border-radius: 50%; display: flex; overflow: hidden;"
-        },
-        {
-            package: "effect.round.ext",
-            syntax: "round-[U]",
-            expr: "-webkit-border-radius: var(--unit-[U]); border-radius: var(--unit-[U]);"
-        },
-        {
-            package: "effect.round.ext",
-            syntax: "round-tl-[U]",
-            expr: "-webkit-top-left-border-radius: var(--unit-[U]); border-top-left-radius: var(--unit-[U]);"
-        },
-        {
-            package: "effect.round.ext",
-            syntax: "round-tr-[U]",
-            expr: "-webkit-top-right-border-radius: var(--unit-[U]); border-top-right-radius: var(--unit-[U]);"
-        },
-        {
-            package: "effect.round.ext",
-            syntax: "round-bl-[U]",
-            expr: "-webkit-bottom-left-border-radius: var(--unit-[U]); border-bottom-left-radius: var(--unit-[U]);"
-        },
-        {
-            package: "effect.round.ext",
-            syntax: "round-br-[U]",
-            expr: "-webkit-bottom-right-border-radius: var(--unit-[U]); border-bottom-right-radius: var(--unit-[U]);"
-        },
-        {
-            package: "effect.border.core",
-            syntax: "border",
-            expr: "border: var(--unit-d5) solid var(--color-gray-4);",
-            units: ["d5"],
-            colors: ["gray-4"]
-        },
-        {
-            package: "effect.border.core",
-            syntax: "border-left",
-            expr: "border-left: var(--unit-d5) solid var(--color-gray-4);",
-            units: ["d5"],
-            colors: ["gray-4"]
-        },
-        {
-            package: "effect.border.core",
-            syntax: "border-right",
-            expr: "border-right: var(--unit-d5) solid var(--color-gray-4);",
-            units: ["d5"],
-            colors: ["gray-4"]
-        },
-        {
-            package: "effect.border.core",
-            syntax: "border-top",
-            expr: "border-top: var(--unit-d5) solid var(--color-gray-4);",
-            units: ["d5"],
-            colors: ["gray-4"]
-        },
-        {
-            package: "effect.border.core",
-            syntax: "border-bottom",
-            expr: "border-bottom: var(--unit-d5) solid var(--color-gray-4);",
-            units: ["d5"],
-            colors: ["gray-4"]
-        },
-        {
-            package: "effect.border.ext",
-            syntax: "border-dashed",
-            expr: "border-style: dashed;",
-        },
-        {
-            package: "effect.border.core",
-            syntax: "border-primary",
-            expr: "border-color: var(--color-primary);",
-        },
-        {
-            package: "effect.border.core",
-            syntax: "border-white",
-            expr: "border-color: var(--color-white);",
-        },
-        {
-            package: "effect.border.core",
-            syntax: "border-black",
-            expr: "border-color: var(--color-black);",
-        },
-        {
-            package: "effect.border.core",
-            syntax: "border-transparent",
-            expr: "border-color: transparent;",
-        },
-        {
-            package: "effect.border.ext",
-            syntax: "border-[U]",
-            expr: "border-width: var(--unit-[U]);",
-        },
-        {
-            package: "effect.border.ext",
-            syntax: "border-[C]-[N]",
-            expr: "border-color: var(--color-[C]-[N]);",
-        },
-        {
-            package: "effect.border.ext",
-            syntax: "border-[C]-[N]-[A]",
-            expr: "border-color: var(--color-[C]-[N]-[A]);",
-        },
-        {
-            package: "effect.shadow.ext",
-            syntax: "shadow",
-            expr: "box-shadow: 0 var(--unit-4) var(--unit-10) var(--color-gray-5);",
-            units: ["4", "10"],
-            colors: ["gray-5"]
-        },
-        {
-            package: "effect.opacity.ext",
-            syntax: "opacity-[N]",
-            expr: "opacity: 0.[N];"
-        },
-        {
-            package: "transform.rotate.ext",
-            syntax: "rotate-[N]",
-            expr: "transform: rotate([N]deg); webkit-transform: rotate([N]deg);",
-        },
-    ]
 }
 
 
@@ -580,10 +40,6 @@ export namespace style {
          * 单位一的表示
          */
         one: ValueRange
-        /**
-         * 基础颜色设置
-         */
-        color: { [index: string]: string; }
         /**
          * 主题设置
          */
@@ -638,54 +94,61 @@ export namespace style {
 
     interface StyleRuleSetting {
         ruleMap: { [index: string]: AtomicStyleRule, }
-        ruleNames: string[]
+        // ruleNames: string[]
+        rules: AtomicStyleRule[]
         themes: string[]
     }
 
     const DefaultConfig: CssConfig = {
         default: {
             "unit": "full,d5,1,2,4,8,10,20,24,28,32,36,48,64,72,80,96,120,144,256,512",
-            "theme": Object.keys(resource.theme).join(",")
+            "theme": Object.keys(theme.Themes).join(",")
         },
         root: {
             "wx+xcx": "page"
         },
         one: {from: 1, to: 7.5, scale: 3, unit: "vmin"},
-        color: {
-            "primary": resource.primaryColor,
-            "black": "#000000",
-            "white": "#ffffff",
-        },
-        theme: resource.theme
+        theme: theme.Themes
     }
 
 
-    export const generateCssContent = (browser: string, classExprs: string[], config: CssConfig = DefaultConfig): string => {
+    export const generateCssContent = (browser: string, classExprs: string[], config: CssConfig = DefaultConfig): { varContent: string, styleContent: string, warnings: string[] } => {
         try {
             const styleList: string[] = [];
+
             let unitList: string[] = []
-            const ruleSetting = initRuleSetting(resource.DefaultStyles, Object.keys(DefaultConfig.theme));
-            log(`[task] read ${ruleSetting.ruleNames.length} rules`)
+            let colorList: string[] = []
+
+            const ruleSetting = initRuleSetting(rule.DefaultStyles, Object.keys(DefaultConfig.theme));
+            log(`[task] read ${ruleSetting.rules.length} rules`)
             log(`[task] try to generate [${classExprs.length}] styles`)
+
             const warnings: string[] = []
             classExprs.sort().forEach((classExpr: string, index: number) => {
-                const {units, styles} = makeCssForExpr(classExpr, ruleSetting, warnings)
+                const {units, colors, styles} = makeCssForExpr(classExpr, ruleSetting, warnings)
+
                 const order = `${index + 1}/${classExprs.length}`.padStart(8, " ")
                 const unitString = units.length == 0 ? "" : `units = ${units.join(",")}`
-                log(`[task] ${order}`, classExpr.padEnd(20, " "), unitString)
+                const colorString = colors.length == 0 ? "" : `colors = ${colors.join(",")}`
+                log(`[task] ${order}`, classExpr.padEnd(20, " "), unitString, colorString)
+
                 unitList.push(...units)
+                colorList.push(...colors)
                 styleList.push(...styles)
             })
             unitList = unitList.compact().unique().sort()
             log(`[task] found total [${unitList.length}] units [${unitList.join(",")}]`)
-            if(warnings.length > 0) {
-                log(`[warning] total found ${warnings.length} warnings`)
-                warnings.forEach((m: string) => log(m))
+            colorList = colorList.compact().unique().sort()
+            const vars = generateVars(browser, unitList, colorList, config)
+
+            if (warnings.length == classExprs.length) {
+                return {varContent: "", styleContent: "", warnings}
             }
-            const vars = generateVars(browser, unitList, [], config)
-            return vars + "\n" + styleList.join("\n")
+
+            return {varContent: vars, styleContent: styleList.join("\n"), warnings}
         } catch (e) {
-            return `${e}`
+            console.error(e)
+            return {varContent: "", styleContent: `${e}`, warnings: [e.toString()]}
         }
     }
 
@@ -704,14 +167,22 @@ export namespace style {
             if (matchResult.groups["U"]) {
                 para.unit = matchResult.groups["U"]
             }
-            if (matchResult.groups["N"]) {
-                para.number = matchResult.groups["N"]
-            }
             if (matchResult.groups["C"]) {
                 para.color = matchResult.groups["C"]
             }
+            if (matchResult.groups["N"]) {
+                para.number = matchResult.groups["N"]
+            }
             if (matchResult.groups["A"]) {
-                para.color = matchResult.groups["A"]
+                para.alpha = matchResult.groups["A"]
+            }
+            if (para.color) {
+                if (para.number == undefined) {
+                    para.number = 1
+                } else if (theme.Themes[para.color].length == 1) {
+                    para.alpha = para.number
+                    para.number = 1
+                }
             }
         }
         return para
@@ -723,53 +194,61 @@ export namespace style {
         }
         // 通过包名引入静态规则
         if (expression.includes(".")) {
-            return Object.keys(ruleSetting.ruleMap).filter((syntax: string) => {
-                const rule = ruleSetting.ruleMap[syntax]
+            return ruleSetting.rules.filter((rule: AtomicStyleRule) => {
                 return rule.package.includes(expression) && !rule.syntaxRegex
-            }).map((syntax: string) => ruleSetting.ruleMap[syntax])
+            })
         }
         // 直接查询
         let rule = ruleSetting.ruleMap[expression]
         if (rule) {
             return [rule]
         }
-        // 如果包含数字，匹配动态规则
-        const exprWithoutNumber = expression.replace(/\d+/g, "[]")
-        rule = ruleSetting.ruleMap[exprWithoutNumber]
-        if (rule) {
-            return [rule]
-        }
-        return Object.keys(ruleSetting.ruleMap).filter((syntax: string) => {
-            return ruleSetting.ruleMap[syntax]?.syntaxRegex?.test(expression)
-        }).map((syntax: string) => ruleSetting.ruleMap[syntax])
-
+        return ruleSetting.rules.filter((rule: AtomicStyleRule) => {
+            return rule.syntaxRegex?.test(expression)
+        })
     }
 
 
-    const makeCssForExpr = (expression: string, ruleSetting: StyleRuleSetting, warnings: string[]): { units: string[], styles: string[] } => {
+    const makeCssForExpr = (expression: string, ruleSetting: StyleRuleSetting, warnings: string[]): { units: string[], colors: string[], styles: string[] } => {
         let rules = searchRulesByExpr(expression, ruleSetting)
         if (rules == undefined || rules.length == 0) {
-            warnings.push(`[warning] expression [${expression}] has no matched rules`)
-            return {units: [], styles: []}
+            warnings.push(expression)
+            return {units: [], colors: [], styles: []}
         }
 
-        const classRuleList = rules.map((rule: AtomicStyleRule) => {
+        const classRuleStack = rules.map((rule: AtomicStyleRule) => {
             return {classExpr: expression, rule}
         })
 
         const styles: string[] = []
         const units: string[] = []
+        const colors: string[] = []
 
-        while (classRuleList.length > 0) {
-            const classRule = classRuleList.shift()
+        while (classRuleStack.length > 0) {
+            const classRule = classRuleStack.shift()
             if (!classRule) {
                 break
             }
 
-            const para = extraPara(classRule.classExpr, classRule.rule)
-            units.push(para?.unit || "")
+            const para: ExprPara = extraPara(classRule.classExpr, classRule.rule)
+            // if (para?.color) {
+            //     console.log("colors result", classRule.classExpr, para)
+            // }
+            if (para != undefined) {
+                if (para.unit) {
+                    units.push(para.unit)
+                }
+                if (para.color) {
+                    if (para.alpha == undefined) {
+                        colors.push(`${para.color}-${para.number || 0}`)
+                    } else {
+                        colors.push(`${para.color}-${para.number || 0}-${para.alpha || ""}`)
+                    }
+                }
+            }
             if (classRule.rule.expr) {
                 units.push(...(classRule.rule?.units || []))
+                colors.push(...(classRule.rule?.colors || []))
                 const style = wrapPara(classRule.rule.expr, para)
                 styles.push(style)
             } else if (classRule.rule.compose) {
@@ -778,7 +257,8 @@ export namespace style {
                     let newRules = searchRulesByExpr(newClassExpr, ruleSetting)
                     newRules?.forEach((rule: AtomicStyleRule) => {
                         units.push(...(rule?.units || []))
-                        classRuleList.unshift({classExpr: newClassExpr, rule})
+                        colors.push(...(rule?.colors || []))
+                        classRuleStack.unshift({classExpr: newClassExpr, rule})
                     })
                 })
 
@@ -790,7 +270,7 @@ export namespace style {
             styles.push("}")
         }
 
-        return {units: units.compact().unique(), styles}
+        return {units: units.compact().unique(), colors: colors.compact().unique(), styles}
     }
 
     const wrapPara = (expression: string, para?: ExprPara | undefined): string => {
@@ -814,125 +294,167 @@ export namespace style {
 
     /**
      * 将样式规则数组转换为字典，便于快速读取
-     * @param styles 样式规则数组
+     * @param rules 样式规则数组
      * @param themes 主题名称
      */
-    const initRuleSetting = (styles: AtomicStyleRule[], themes: string[]): StyleRuleSetting => {
+    const initRuleSetting = (rules: AtomicStyleRule[], themes: string[]): StyleRuleSetting => {
         const ruleMap: { [index: string]: AtomicStyleRule } = {}
-        const ruleNames: string[] = []
-        styles.forEach((style: AtomicStyleRule) => {
-            if (style.syntax.includes("[")) {
+        rules.forEach((rule: AtomicStyleRule) => {
+
+            // auto extract dependent units and colors
+            if (rule.expr) {
+                if (rule.expr.includes("--unit")) {
+                    const units = rule.expr.match(/--unit-([0-9|d|p]+)/g)
+                    if (units) {
+                        rule.units = units.map((m: string) => m.replace("--unit-", ""))
+                    }
+                }
+                if (rule.expr.includes("--color")) {
+                    const units = rule.expr.match(/--color-([a-z]+)(-[0-9]+(-a[0-9]+)?)?/g)
+                    if (units) {
+                        rule.colors = units.map((m: string) => m.replace("--color-", ""))
+                    }
+                }
+                // if(rule.units && rule.units.length) {
+                //     console.log("=====", rule.syntax, rule.units, rule.colors)
+                // }
+            }
+
+            if (rule.syntax.includes("[")) {
                 // 生成动态规则名称
-                const syntax = style.syntax.replace(/[C|U|N|A]/g, "")
-                ruleNames.push(syntax)
+                const ruleMapName = rule.syntax.replace(/[C|U|N|A]/g, "")
                 // 生成正则表达式
-                const regexExpr = style.syntax
-                    .replace("[U]", "(?<U>[0-9a-z]+)")
+                const regexExpr = rule.syntax
+                    .replace("[U]", "(?<U>[0-9|d|p]+)")
                     .replace("[C]", "(?<C>[a-z]+)")
                     .replace("[N]", "(?<N>[0-9]+)")
                     .replace("[A]", "(?<A>[0-9]+)")
                 // 设置规则名称
-                style.syntaxRegex = new RegExp("^" + regexExpr + "$")
-                ruleMap[syntax] = style
-                ruleMap[style.syntax] = style
+                rule.syntaxRegex = new RegExp("^" + regexExpr + "$")
+                ruleMap[ruleMapName] = rule
             } else {
-                ruleMap[style.syntax] = style
+                ruleMap[rule.syntax] = rule
             }
-            ruleNames.push(style.syntax)
         })
-        return {ruleMap, themes, ruleNames}
+        return {ruleMap, themes, rules}
     }
 
     /**
      * 生成变量的CSS
      * @param plat 运行环境简称
      * @param units 全部数值
-     * @param colorThemes 主题色
+     * @param colors
      * @param config CSS基础配置
      */
-    const generateVars = (plat: string, units: string[], colorThemes: string[], config: CssConfig): string => {
+    const generateVars = (plat: string, units: string[], colors: string[], config: CssConfig): string => {
         const root = config.root[plat]
         if (!root) {
             throw Error(`missing root for ${plat}`)
         }
-        if (units.length == 0) {
-            units = config.default["unit"].split(",")
-        } else {
-            units = units.filter((m: string, index: number) => units.indexOf(m) == index)
-                .sort((left: string, right: string) => {
-                    return parseFloat(left.replace("d", "0.")) - parseFloat(right.replace("d", "0."))
-                })
-        }
-        if (colorThemes.length == 0) {
-            colorThemes = config.default["theme"].split(",")
-        }
+
+        const clearFunctions = [
+            {rule: /d/g, value: "0."},
+            {rule: /p/g, value: "0.000"},
+        ]
+        const getUnitNumber = (v: string) => parseFloat(v.replace(clearFunctions[0].rule, clearFunctions[0].value)
+            .replace(clearFunctions[1].rule, clearFunctions[1].value))
+        units = units.sort((left: string, right: string) => getUnitNumber(left) - getUnitNumber(right))
 
         const vars: string[] = []
         vars.push(`${root} {`)
         units.forEach((unit: string) => {
-            vars.push(generateUnitVar(unit, config))
+            vars.push(`--unit-${unit}: ${calcUnitValue(unit, config)};`)
         })
 
-        vars.push("")
-        vars.push(`--color-primary: ${config.color?.primary};`)
-        vars.push(`--color-white: ${config.color?.white};`)
-        vars.push(`--color-black: ${config.color?.black};`)
-        vars.push("")
+        // vars.push("")
+        // vars.push(`--color-primary: rgb(${theme.Colors.primary});`)
+        // vars.push(`--color-white: rgb(${theme.Colors.white});`)
+        // vars.push(`--color-black: rgb(${theme.Colors.black});`)
+        // vars.push("")
 
-        colorThemes.forEach((themeName: string) => {
-            vars.push(...generateColorVarsForTheme(themeName, config))
-            vars.push("")
+        colors.forEach((color: string) => {
+            // color = color.replace("primary", "primary-1")
+            //     .replace("white", "white-1")
+            //     .replace("black", "black-1")
+            const colorInfo = color.match(/(?<theme>[a-z]+)-(?<order>\d+)(-(?<alpha>\d+))?/)?.groups
+            if (!colorInfo) {
+                throw Error(`invalid color ${color}`)
+            }
+
+            const {theme, order, alpha} = colorInfo
+            vars.push(`--color-${color}: ${generateColorVar(theme, order, alpha, config)};`)
         })
+
+
         vars.push("}")
         return vars.join("\n")
     }
 
     /**
-     * 生成数值变量
-     * @param unit 数值
-     * @param config CSS基础配置
+     * calc unit value
+     * @param unit unit number value or percent value
+     * @param config unit one's config
      */
-    const generateUnitVar = (unit: string, config: CssConfig): string => {
-        if (unit == "") {
-            return ""
-        }
-        if (unit == "full") {
-            return "--unit-full: 100%;"
-        }
+    const calcUnitValue = (unit: string, config: CssConfig): string => {
+        // zero means nothing without rpx or vm etc.
         if (unit == "0") {
-            return "--unit-0: 0;"
+            return "0"
         }
-        const oriUnit = unit
-        if (unit.startsWith("d")) {
-            unit = unit.replace("d", "0.")
+
+        // alias full means "100%", equals to "p100"
+        if (unit == "full") {
+            return "100%"
         }
-        const numberValue = Number(unit)
-        if (isNaN(numberValue)) {
-            throw Error(`invalid number value: ${unit}`)
+
+        // transform decimal value, "d" means "0.", "d5" means "0.5"
+        unit = unit.replace("d", "0.")
+
+        // number value
+        if (/^([\d\\.]+)$/.test(unit)) {
+            const numberValue: Number = Number(unit)
+            const scale = Math.pow(10, config.one.scale)
+            return Math.round(numberValue * config.one.from * scale / config.one.to) / scale + config.one.unit
         }
-        const scale = Math.pow(10, config.one.scale)
-        const unitValue = Math.round(numberValue * config.one.from * scale / config.one.to) / scale
-        return `--unit-${oriUnit}: ${unitValue}${config.one.unit};`
+
+        // percent value
+        if (/^p(\d+)$/.test(unit)) {
+            return unit.replace(/^p(\d+)$/, "$1%")
+        }
+
+        throw Error(`invalid unit value: ${unit}`)
     }
 
     /**
      * 生成主题色彩变量
      * @param themeName 主题名称
+     * @param colorOrder
+     * @param alpha
      * @param config CSS基础配置
      */
-    const generateColorVarsForTheme = (themeName: string, config: CssConfig): string[] => {
-        const vars: string[] = []
+    const generateColorVar = (themeName: string, colorOrder: string, alpha: string, config: CssConfig): string => {
         if (themeName == "") {
             throw Error("missing theme name")
         }
         if (!config.theme[themeName]) {
             throw Error(`missing theme ${themeName}`)
         }
-        const colors = config.theme[themeName] as string[]
-        colors.forEach((color: string, index: number) => {
-            vars.push(`--color-${themeName}-${index + 1}: ${color};`)
-        })
-        return vars
+        const colors = theme.Themes[themeName] as string[]
+        if (colors.length == 0) {
+            throw Error(`theme ${themeName} is empty`)
+        }
+        if (!colorOrder) {
+            return `rgb(${colors[0]})`
+        }
+        const orderValue = parseInt(colorOrder) - 1
+        if (orderValue >= 0 && orderValue <= colors.length - 1) {
+            if (alpha == undefined || alpha == 1) {
+                return `rgb(${colors[orderValue]})`
+            } else {
+                return `rgba(${colors[orderValue]}, 0.${alpha})`
+            }
+        }
+
+        throw Error(`invalid color value ${themeName}-${colorOrder}-${alpha}`)
     }
 
 
@@ -941,32 +463,49 @@ export namespace style {
 namespace wx {
 
     export interface FileConfig {
+        miniProgramDir: string
+        componentDir: string
         appConfigFile: string
         cssMainFile: string
+        cssVarFile: string
         cssOutputFile: string
         cssInputFiles: string[]
     }
 
-    const DefaultConfig: FileConfig = {
+    const Config: FileConfig = {
+        miniProgramDir: "miniprogram",
+        componentDir: "components",
         appConfigFile: "app.json",
         cssMainFile: "app.wxss",
+        cssVarFile: "var.wxss",
         cssOutputFile: "mini.wxss",
         cssInputFiles: ["font.wxss"]
     }
 
-    const extraClassItem = (className: string): string[] => {
-        if (className == "" || className.length < 2) {
+    /**
+     * extract class names from class attribute value
+     * e.g. get ['text-28', 'text-black'] from 'text-28 text-black'
+     * @param classAttributeValue attribute value of class or as class
+     */
+    const extractClassNames = (classAttributeValue: string): string[] => {
+        // do not parse short class names
+        if (classAttributeValue.length < 2) {
             return []
         }
-        className = className.replace(/[a-zA-Z\d\.\s=&\[\]<>!]+\?/g, "")
-        if (className.match(/^[\s\da-z-\\.]+$/)) {
-            return className.trim().split(/\s+/)
+
+        // clean logic expression chars
+        classAttributeValue = classAttributeValue.replace(/[a-zA-Z\d\.\s=&\[\]<>!%]+\?/g, "")
+
+        // if value is only class names, just split it
+        if (classAttributeValue.match(/^[\s\da-z-\\.]+$/)) {
+            return classAttributeValue.trim().split(/\s+/)
         }
-        const result = className.trim().match(/[\w-]+/g)
-        if (!result) {
-            return []
-        }
-        return result.filter(m => m.length > 1 && !/[A-Z]/.test(m))
+
+        // find class names by splitting words
+        const result = classAttributeValue.match(/[\w-]+/g)
+
+        // remove short class names and uppercase class names
+        return result ? result.filter(m => m.length > 1 && !/[A-Z]/.test(m)) : []
     }
 
     const parseClassItemFromPage = (page: string): string[] => {
@@ -979,7 +518,7 @@ namespace wx {
             }
             const isValidAttr = attrName == "class" || attrName == "hover-class" || attrName == "placeholder-class"
             if (isValidAttr && token.type == TokenType.ATTR_VALUE) {
-                const items = extraClassItem(token.getValue())
+                const items = extractClassNames(token.getValue())
                 log(`[check]${"".padEnd(9, " ")}parse class attribute [${token.getValue()}] to [${items.join(",")}]`)
                 classNames.push(...items)
             }
@@ -1003,7 +542,64 @@ namespace wx {
         }
     }
 
-    export const generateCssFile = async (workDir: string, generateCount: number = false, config: FileConfig = DefaultConfig, engine: (browserName: string, classItems: string[]) => string = style.generateCssContent) => {
+    const parseComponentClassNames =  (page: string, componentsPages: string[], config: wx.FileConfig): string[] => {
+        if (page.endsWith(".wxml")) {
+            log(`[check] process component page ${page}`)
+            let jsFileName = ""
+            const tsPage = page.replace(".wxml", ".ts")
+            if (componentsPages.indexOf(tsPage) == -1) {
+                const jsPage = page.replace(".wxml", ".js")
+                if (componentsPages.indexOf(jsPage) == -1) {
+                    return
+                }
+                jsFileName = jsPage
+            } else {
+                jsFileName = tsPage
+            }
+
+            const pageContent: string =  Deno.readTextFileSync(jsFileName)
+
+            if (/addGlobalClass:\s*true/.test(pageContent)) {
+                log(`[check]    detect global class`)
+                const cssPage = page.replace(".wxml", ".wxss")
+                if (componentsPages.indexOf(cssPage) > -1) {
+                    const classNames: string[] = parseClassItemFromPage(page)
+                    const styleNames: string[] = readClassNamesFromCssFile(cssPage) || []
+                    const toCreateClassNames = classNames.diff(styleNames)
+
+                    log("[check]    find xxx", toCreateClassNames)
+                    return toCreateClassNames
+                }
+            }
+        }
+        return []
+    }
+
+    const parseComponentGlobalClassNames = async (workDir: string, config: wx.FileConfig): string[] => {
+        // read all components files
+        const componentsDirs: string[] = [`${workDir}/${config.componentDir}`]
+        const componentsPages: string[] = []
+
+        while (componentsDirs.length > 0) {
+            const curDir = componentsDirs.shift()
+            for await (const dirEntry of Deno.readDir(curDir)) {
+                if (dirEntry.isDirectory) {
+                    componentsDirs.unshift(`${curDir}/${dirEntry.name}`)
+                } else if (dirEntry.isFile) {
+                    componentsPages.push(`${curDir}/${dirEntry.name}`)
+                }
+            }
+        }
+        console.log("componentsPages", componentsPages)
+
+        let classNames: string[] = componentsPages.map((page: string) => parseComponentClassNames(page, componentsPages, config))
+        classNames = classNames.flat().compact().unique()
+
+        console.log("classNames", classNames)
+        return classNames
+    }
+
+    export const generateCssFile = async (workDir: string, generateCount: number = false, config: FileConfig = Config, engine: (browserName: string, classItems: string[]) => string = style.generateCssContent): number => {
 
         const pages = await Deno.readTextFile(`${workDir}/${config.appConfigFile}`)
             .then((data: string) => JSON.parse(data))
@@ -1021,7 +617,10 @@ namespace wx {
         }).flat().compact().unique()
         log(`[check] found total [${globalClassStyleNames.length}] global class styles`)
 
-        let missingClassNames: string[] = []
+        let componentClassNames: string[] = await parseComponentGlobalClassNames(workDir, config)
+        log(`[check] components found [${componentClassNames.length}] class names [${componentClassNames.join(",")}]`)
+
+        let missingClassNames: string[] = [...componentClassNames]
         pages.forEach((page: string, index: number) => {
             const order = `${index + 1}/${pages.length})`.padStart(7, ' ')
             const pageEmpty = "".padEnd(9, " ")
@@ -1047,13 +646,12 @@ namespace wx {
             }
         })
 
-        const cssOutputFileName = `${workDir}/${config.cssOutputFile}`
+        const cssOutputFileName = `${workDir}\\${config.cssOutputFile}`
 
         missingClassNames = missingClassNames.unique()
         if (missingClassNames.length == 0) {
             log(`[check] no global styles to create`)
-            await Deno.writeTextFile(cssOutputFileName, "");
-            return
+            return Promise.resolve(1)
         }
 
         log(`[check] total to create [${missingClassNames.length}] global styles`)
@@ -1067,58 +665,107 @@ namespace wx {
             log(`[check] skip style names in [${config.cssOutputFile}]`)
         }
 
-        missingClassNames = missingClassNames.diff(generatedClasItems)
-        if (missingClassNames.length == 0) {
+        const newClassNames = missingClassNames.diff(generatedClasItems)
+        if (newClassNames.length == 0) {
             log(`[check] no class items to create`)
-            return
+            return Promise.resolve(2)
         }
 
-        log(`[task] create [${missingClassNames.length}] class items [${missingClassNames.join(",")}]`)
+        log(`[task] create [${newClassNames.length}] class items [${newClassNames.join(",")}]`)
 
-        let cssContent = engine("wx+xcx", missingClassNames)
+        if (generateCount > 0) {
+            let {content, warnings} = engine("wx+xcx", newClassNames)
+            if (warnings.length == newClassNames.length) {
+                log(`[task] no updates with warnings`)
+                return Promise.resolve(4)
+            }
+        }
+        let {varContent, styleContent, warnings} = engine("wx+xcx", missingClassNames)
 
-        await Deno.writeTextFile(cssOutputFileName, cssContent, {
-            append: generateCount > 0,
-            create: generateCount == 0
-        });
-        log(`[task] save ${cssContent.length} chars to ${cssOutputFileName}`)
+        if (warnings.length > 0) {
+            log(`[warning] total found ${warnings.length} class names without rules, ${warnings.join(",")}`)
+        }
+        if (styleContent.length == 0) {
+            log(`[task] no updates`)
+            return Promise.resolve(3)
+        }
+        if (warnings.length == newClassNames.length) {
+            log(`[task] no updates with warnings`)
+            return Promise.resolve(4)
+        }
+
+        log(`[task] begin to write output file`)
+        Deno.writeTextFileSync(config.cssVarFile, varContent)
+        log(`[task] save ${varContent.length} chars to ${config.cssVarFile}`)
+        Deno.writeTextFileSync(cssOutputFileName, styleContent)
+        log(`[task] save ${styleContent.length} chars to ${cssOutputFileName}`)
+        return Promise.resolve(0)
+    }
+
+
+    export const getWorkDir = async (): string => {
+
+        let workDir = Deno.args.length > 0 ? Deno.args[0] : "."
+        for await (const dirEntry of Deno.readDir(workDir)) {
+            if (dirEntry.name == Config.miniProgramDir) {
+                log(`working directory found for ${Config.miniProgramDir} at ${workDir}`)
+                return Promise.resolve(`${workDir}\\${Config.miniProgramDir}`)
+            }
+            if (dirEntry.name == Config.cssMainFile) {
+                log(`working directory found for ${Config.cssMainFile} at ${workDir}`)
+                return Promise.resolve(workDir)
+            }
+        }
+
+        log(`invalid working directory, can not found ${Config.cssMainFile} or ${Config.miniProgramDir} directory`)
+        return Promise.reject("should set working directory to wechat mini program dir")
     }
 }
 
-const getWorkDir = async (): string => {
-    const MAIN_DIR: string = "miniprogram"
-    const MAIN_CSS: string = "app.wxss"
-
-    let workDir = Deno.args.length > 0 ? Deno.args[0] : "."
-    for await (const dirEntry of Deno.readDir(workDir)) {
-        if (dirEntry.name == MAIN_DIR) {
-            log(`working directory found for ${MAIN_DIR} at ${workDir}`)
-            return Promise.resolve(`${workDir}/${MAIN_DIR}`)
-        }
-        if (dirEntry.name == MAIN_CSS) {
-            log(`working directory found for ${MAIN_CSS} at ${workDir}`)
-            return Promise.resolve(workDir)
-        }
-    }
-
-    log(`invalid working directory, can not found ${MAIN_CSS} or ${MAIN_DIR} directory`)
-    return Promise.reject("should set working directory to wechat mini program dir")
-}
+/**
+ * 延时函数
+ * @param delay 延时毫秒数
+ */
+const sleep = (delay: number) => new Promise((resolve) => setTimeout(resolve, delay))
 
 const main = async (workDir: string) => {
     let count = 0
 
-    await wx.generateCssFile(workDir, count++)
+    wx.generateCssFile(workDir, count++)
     log("[task] wxmp-atomic-css service started")
 
-    const watcher = Deno.watchFs(workDir);
+    let watcher = Deno.watchFs(workDir);
+
+    let working: boolean = false
+
     for await (const event of watcher) {
-        // log(">>>> event", event);
-        if (event.kind == "modify" && event.paths.filter((m: string) => m.includes(".wxml")).length > 0) {
-            await wx.generateCssFile(workDir, 0)
-            log(`[task] wxmp-atomic-css refresh ${count}x`)
+        log(">>>> event", event);
+
+        if (working) {
+            continue
+        }
+
+        if (event.paths.filter((m: string) => m.endsWith(".wxml")).length > 0) {
+
+            if (!working) {
+                working = true
+                // watcher.close()
+
+                sleep(200).then(() => {
+                    return wx.generateCssFile(workDir, 1)
+                }).then((result: number) => {
+                    // sleep(200).then(() => {
+                    //     watcher = Deno.watchFs(workDir);
+                    // })
+                    working = false
+                    log(`[task] wxmp-atomic-css refresh ${count++}x, result=${result}`)
+                })
+            }
+            // log(">>>> event", event);
+
+            // await wx.generateCssFile(workDir, 0)
         }
     }
 }
 
-getWorkDir().then(main)
+wx.getWorkDir().then(main)
