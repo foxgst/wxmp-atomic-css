@@ -19,7 +19,15 @@ export namespace util {
      */
     export const sleep = (delay: number) => new Promise((resolve) => setTimeout(resolve, delay))
 
-    export const promiseToStringArrayLimit = async (taskName: string, taskCount: number, limit: number, showTaskStep: boolean, process: (taskIndex: number) => Promise<T>): T[] => {
+    /**
+     * mark a timestamp and return escaped time
+     */
+    export const timing = (): number => {
+        const at = new Date().getTime()
+        return {at, es: () => new Date().getTime() - at}
+    }
+
+    export const promiseLimit = async (taskName: string, taskCount: number, limit: number, showTaskStep: boolean, process: (taskIndex: number) => Promise<T>): T[] => {
         const result: T[] = []
 
         log(`[task] [${taskName}] begin ${taskCount} tasks`)
@@ -27,7 +35,7 @@ export namespace util {
             const currentTasks: Promise<string[]> = []
             for (let j = 0; j < limit && i + j < taskCount; j++) {
                 const taskIndex = i + j
-                if(showTaskStep) {
+                if (showTaskStep) {
                     log(`[task] [${taskName}] ${taskIndex + 1}/${taskCount}`)
                 }
                 currentTasks.push(process(taskIndex))
@@ -107,7 +115,7 @@ export namespace style {
         alpha?: string
     }
 
-    interface StyleRuleSetting {
+    export interface StyleRuleSetting {
         ruleMap: { [index: string]: AtomicStyleRule, }
         rules: AtomicStyleRule[]
         themes: string[]
@@ -402,6 +410,23 @@ export namespace style {
     }
 
 
+    export const generateStyleContents = (missingClassNames: string[], ruleSetting: style.StyleRuleSetting, showStyleTaskResult: boolean): StyleInfo[] => {
+        return missingClassNames.map((classExpr: string): style.StyleInfo => {
+            const {units, colors, styles, warnings} = style.makeCssForExpr(classExpr, ruleSetting)
+
+            if (showStyleTaskResult) {
+                const order = "".padStart(12, " ")
+                const unitString = units.length == 0 ? "" : `units = ${units.join(",")}`
+                const colorString = colors.length == 0 ? "" : `colors = ${colors.join(",")}`
+                const warningString = warnings.length == 0 ? "" : `warnings = ${warnings.join(",")}`
+                log(`[task] ${order}`, classExpr.padEnd(20, " "), unitString, colorString, warningString)
+            }
+
+            return {units, colors, styles, warnings}
+        })
+    }
+
+
 }
 
 namespace wx {
@@ -413,7 +438,7 @@ namespace wx {
         cssPath?: string
     }
 
-    export interface FileConfig {
+    export interface WxRunningConfig {
 
         workDir: string
 
@@ -445,6 +470,7 @@ namespace wx {
         }
 
         debugOptions: {
+            printConfigInfo: boolean
             showPageClassNames: boolean
             showPageClassAttribute: boolean
             showCssStyleNames: boolean
@@ -452,14 +478,18 @@ namespace wx {
             showPageTaskResult: boolean
             showStyleTaskResult: boolean
             showTaskStep: boolean
+            showFileContent: boolean
         }
 
         processOption: {
             promiseLimit: number
         }
+
+        tempData: { [index: string]: any }
+
     }
 
-    export const DefaultConfig: FileConfig = {
+    export const DefaultConfig: WxRunningConfig = {
         miniProgramDir: "miniprogram",
         componentDir: "components",
         appConfigFile: "app.json",
@@ -489,18 +519,22 @@ namespace wx {
         },
 
         debugOptions: {
+            printConfigInfo: true,
             showPageClassNames: false,
             showPageClassAttribute: false,
             showCssStyleNames: false,
             showPageTaskBegin: false,
             showPageTaskResult: false,
             showStyleTaskResult: false,
-            showTaskStep: false
+            showTaskStep: false,
+            showFileContent: false
         },
 
         processOption: {
             promiseLimit: 5
-        }
+        },
+
+        tempData: {}
     }
 
     /**
@@ -529,7 +563,7 @@ namespace wx {
         return result ? result.filter(m => m.length > 1 && !/[A-Z]/.test(m)) : []
     }
 
-    const parseClassItemFromPage = (page: string, config: FileConfig): string[] => {
+    const parseClassItemFromPage = (page: string, config: WxRunningConfig): string[] => {
         let classNames: string[] = []
         const xml = Deno.readTextFileSync(page)
         let attrName = ""
@@ -566,7 +600,7 @@ namespace wx {
         }
     }
 
-    export const parseComponentClassNames = (pageInfo: PageInfo, componentsPages: string[], config: wx.FileConfig): string[] => {
+    export const parseComponentClassNames = (pageInfo: PageInfo, componentsPages: string[], config: wx.WxRunningConfig): string[] => {
 
         if (config.debugOptions.showPageTaskBegin) {
             log(`[task] process component page ${page}`)
@@ -612,7 +646,7 @@ namespace wx {
         return toCreateClassNames
     }
 
-    export const parseComponentPages = async (config: wx.FileConfig): PageInfo[] => {
+    export const parseComponentPages = async (config: wx.WxRunningConfig): PageInfo[] => {
         // read all components files
         const componentsStack: string[] = [`${config.workDir}/${config.componentDir}`]
         const componentsPages: string[] = []
@@ -639,7 +673,7 @@ namespace wx {
             })
     }
 
-    export const parseMiniProgramPages = async (config: FileConfig): string[] => {
+    export const parseMiniProgramPages = async (config: WxRunningConfig): string[] => {
         const pages = await Deno.readTextFile(`${config.workDir}/${config.appConfigFile}`)
             .then((data: string) => JSON.parse(data))
             .then((app: any) => [...app.pages, ...(app.subpackages || []).map((pkg: any) => pkg.pages.map((page: string) => `${pkg.root}/${page}`)).flat()])
@@ -647,7 +681,7 @@ namespace wx {
         return pages.map((page: string) => `${config.workDir}/${page}.wxml`)
     }
 
-    export const parseGlobalStyleNames = async (config: wx.FileConfig): string[] => {
+    export const parseGlobalStyleNames = async (config: wx.WxRunningConfig): string[] => {
         return await [...config.cssInputFiles, config.cssMainFile].map((filename: string) => {
             const result = readClassNamesFromCssFile(`${config.workDir}/${filename}`)
             if (result == undefined) {
@@ -659,7 +693,7 @@ namespace wx {
         }).flat().compact().unique()
     }
 
-    export const parsePageClassNames = async (config: FileConfig, pagePath: string): string[] => {
+    export const parsePageClassNames = async (config: WxRunningConfig, pagePath: string): string[] => {
 
         const pageEmpty = "".padEnd(9, " ")
 
@@ -697,7 +731,7 @@ namespace wx {
         return missingStyleNames
     }
 
-    export const parseCssOutputFileStyleNames = (config: FileConfig): string[] => {
+    export const parseCssOutputFileStyleNames = (config: WxRunningConfig): string[] => {
         //if (config.watchOptions.refreshCount++ == 0) {
         return []
         //}
@@ -708,13 +742,13 @@ namespace wx {
     }
 
 
-    export const setMiniProgramOptions = async (customConfig?: FileConfig = {}): FileConfig => {
-        const config: FileConfig = Object.assign({}, DefaultConfig, customConfig)
+    export const setMiniProgramOptions = async (customConfig?: WxRunningConfig = {}): WxRunningConfig => {
+        const config: WxRunningConfig = Object.assign({}, DefaultConfig, customConfig)
         return Promise.resolve(config)
     }
 
 
-    export const ensureWorkDir = async (config: FileConfig): FileConfig => {
+    export const ensureWorkDir = async (config: WxRunningConfig): WxRunningConfig => {
 
         let workDir = Deno.args.length > 0 ? Deno.args[0] : "."
         for await (const dirEntry of Deno.readDir(workDir)) {
@@ -735,7 +769,7 @@ namespace wx {
     }
 
 
-    export const watchMiniProgramPageChange = async (config: FileConfig, refreshEvent: (config: FileConfig) => Promise<number>): FileConfig => {
+    export const watchMiniProgramPageChange = async (config: WxRunningConfig, refreshEvent: (config: WxRunningConfig) => Promise<number>): WxRunningConfig => {
 
         let watcher = Deno.watchFs(config.workDir);
         let refreshCount: number = 0
@@ -766,7 +800,17 @@ namespace wx {
         }
     }
 
-    export const mergeResult = (values: Awaited<string[]>[]): { missingClassNames: string[], toRemoveClassNames: string[] } => {
+    export const getRuleSetting = (config: wx.WxRunningConfig): style.StyleRuleSetting => {
+        if (config.tempData["ruleSetting"]) {
+            return config.tempData["ruleSetting"] as style.StyleRuleSetting
+        }
+        const ruleSetting = style.initRuleSetting(rule.DefaultStyles, Object.keys(theme.Themes));
+        config.tempData["ruleSetting"] = ruleSetting
+        log(`[task] read ${ruleSetting.rules.length} rules`)
+        return ruleSetting;
+    }
+
+    export const mergeTargetClassNames = (values: Awaited<string[]>[]): Promise<string[]> => {
         const globalStyleNames = values[0] as string[]
         const generatedStyleNames = values[1] as string[]
         const pageClassNames = values[2] as string[]
@@ -783,76 +827,25 @@ namespace wx {
         const toRemoveClassNames: string[] = [].merge(globalStyleNames).merge(generatedStyleNames)
             .diff(pageClassNames).diff(componentPageClassNames).compact().unique().sort()
 
-        return {missingClassNames, toRemoveClassNames}
-    }
-
-}
-
-
-const mainProcess = (config: wx.FileConfig): Promise<number> => {
-    let start = new Date()
-    return Promise.all([
-        wx.parseGlobalStyleNames(config),
-
-        wx.parseCssOutputFileStyleNames(config),
-
-        wx.parseMiniProgramPages(config).then((pages: string[]): Promise<string[]> =>
-            util.promiseToStringArrayLimit("parse-page-class-names", pages.length,
-                config.processOption.promiseLimit, config.debugOptions.showTaskStep,
-                (taskIndex: number) => {
-                return wx.parsePageClassNames(config, pages[taskIndex])
-            }).then((classNames: string[]) => classNames.flat().compact().unique())
-        ),
-
-        wx.parseComponentPages(config).then((componentPages: wx.PageInfo[]): Promise<string[]> =>
-            util.promiseToStringArrayLimit("parse-component-class-names", componentPages.length,
-                config.processOption.promiseLimit, config.debugOptions.showTaskStep,
-                (taskIndex: number) => {
-                return wx.parseComponentClassNames(componentPages[taskIndex], componentPages, config)
-            }).then((classNames: string[]) => classNames.flat().compact().unique())
-        ),
-    ]).then((values: Awaited<string[]>[]) => {
-
-        const {missingClassNames, toRemoveClassNames} = wx.mergeResult(values)
-
         if (toRemoveClassNames.length > 0) {
             log(`[data] [${toRemoveClassNames.length}] class names to remove, [${toRemoveClassNames.join(",")}]`)
         }
 
         if (missingClassNames.length == 0) {
             log(`[data] no class names to create`)
-            return Promise.resolve(1)
+            return Promise.reject(1)
         }
 
         log(`[data] new task for generate [${missingClassNames.length}] class names = [${missingClassNames.join(",")}]`)
+        return Promise.resolve(missingClassNames)
+    }
 
 
-        const ruleSetting = style.initRuleSetting(rule.DefaultStyles, Object.keys(theme.Themes));
-        log(`[task] read ${ruleSetting.rules.length} rules`)
-
-
-        return util.promiseToStringArrayLimit("generate-style", missingClassNames.length,
-            config.processOption.promiseLimit, config.debugOptions.showTaskStep,
-            (taskIndex: number): Promise<style.StyleInfo> => {
-                const classExpr = missingClassNames[taskIndex]
-                const {units, colors, styles, warnings} = style.makeCssForExpr(classExpr, ruleSetting)
-
-                if (config.debugOptions.showStyleTaskResult) {
-                    const order = "".padStart(12, " ")
-                    const unitString = units.length == 0 ? "" : `units = ${units.join(",")}`
-                    const colorString = colors.length == 0 ? "" : `colors = ${colors.join(",")}`
-                    const warningString = warnings.length == 0 ? "" : `warnings = ${warnings.join(",")}`
-                    log(`[task] ${order}`, classExpr.padEnd(20, " "), unitString, colorString, warningString)
-                }
-
-                return {units, colors, styles, warnings}
-            })
-    }).then((classResultList: style.StyleInfo[]): number => {
-
+    export const save = (classResultList: style.StyleInfo[], config: wx.WxRunningConfig): number => {
         const styles = classResultList.map((m: any) => m.styles).flat()
 
         const warnings = classResultList.map((m: any) => m.warnings).flat().compact().unique().sort()
-        if (warnings.length == 0 && styles.length == 0) {
+        if (warnings.length > 0 && styles.length == 0) {
             log(`[data] no updates with warnings`)
             return Promise.resolve(2)
         }
@@ -866,28 +859,59 @@ const mainProcess = (config: wx.FileConfig): Promise<number> => {
         log(`[task] begin to write output file`)
 
         const varsContent = style.generateVars(units, colors, config.cssOption.rootElementName, config.cssOption.one)
-        // log(`[data] varsContent=${varsContent}`)
-
+        if (config.debugOptions.showFileContent) {
+            log(`[data] varsContent=${varsContent}`)
+        }
         Deno.writeTextFileSync(`${config.workDir}/${config.cssVarFile}`, varsContent)
         log(`[task] save ${varsContent.length} chars to ${config.cssVarFile}`)
 
         const styleContent = classResultList.map((m: any) => m.styles).flat().join("\n")
-        // log(`[data] styleContent=${styleContent}`)
+        if (config.debugOptions.showFileContent) {
+            log(`[data] styleContent=${styleContent}`)
+        }
         Deno.writeTextFileSync(`${config.workDir}/${config.cssOutputFile}`, styleContent)
         log(`[task] save ${styleContent.length} chars to ${config.cssOutputFile}`)
 
         return Promise.resolve(0)
-    }).then((result: number) => {
-        log(`[data] job done, cost ${new Date().getTime() - start.getTime()} ms, result = ${result}`)
-    })
+    }
+
+}
+
+
+const mainProcess = (config: wx.WxRunningConfig): Promise<number> => {
+    let time = util.timing()
+    return Promise.all([
+        wx.parseGlobalStyleNames(config),
+        wx.parseCssOutputFileStyleNames(config),
+        wx.parseMiniProgramPages(config).then((pages: string[]): Promise<string[]> =>
+            util.promiseLimit("parse-page-class-names", pages.length,
+                config.processOption.promiseLimit, config.debugOptions.showTaskStep,
+                (taskIndex: number) => {
+                    return wx.parsePageClassNames(config, pages[taskIndex])
+                }).then((classNames: string[]) => classNames.flat().compact().unique())
+        ),
+        wx.parseComponentPages(config).then((componentPages: wx.PageInfo[]): Promise<string[]> =>
+            util.promiseLimit("parse-component-class-names", componentPages.length,
+                config.processOption.promiseLimit, config.debugOptions.showTaskStep,
+                (taskIndex: number) => {
+                    return wx.parseComponentClassNames(componentPages[taskIndex], componentPages, config)
+                }).then((classNames: string[]) => classNames.flat().compact().unique())
+        ),
+    ])
+        .then((values: Awaited<string[]>[]) => wx.mergeTargetClassNames(values))
+        .then((missingClassNames: string[]) => style.generateStyleContents(missingClassNames, wx.getRuleSetting(config), config.debugOptions.showStyleTaskResult))
+        .then((classResultList: style.StyleInfo[]): number => wx.save(classResultList, config))
+        .then((result: number) => log(`[data] job done, cost ${time.es()} ms, result = ${result}`))
 }
 
 
 (function () {
+
     log("==========================================================");
     log("   wxmp-atomic-css: wechat mini program atomic css kit");
     log("==========================================================");
     log("starting wxmp-atomic-css");
+
     const sigIntHandler = () => {
         console.log("interrupted!");
         Deno.exit();
@@ -895,9 +919,12 @@ const mainProcess = (config: wx.FileConfig): Promise<number> => {
     Deno.addSignalListener("SIGINT", sigIntHandler);
 
     wx.setMiniProgramOptions()
-        .then((config: wx.FileConfig) => wx.ensureWorkDir(config))
-        .then((config: wx.FileConfig) => {
-            log("[data] config: ", config)
+        .then((config: wx.WxRunningConfig) => wx.ensureWorkDir(config))
+        .then((config: wx.WxRunningConfig) => {
+            if(config.debugOptions.printConfigInfo) {
+                log("[data] config: ", config)
+            }
+
             log("[task] start auto generation after started");
 
             mainProcess(config)
