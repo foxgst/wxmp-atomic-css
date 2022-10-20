@@ -3,7 +3,7 @@ import "https://deno.land/std/fs/mod.ts";
 import {htmltok, TokenType} from 'https://deno.land/x/htmltok@v0.0.3/mod.ts';
 import * as css from "https://deno.land/x/css@0.3.0/mod.ts";
 import {theme} from "./theme.ts";
-import {rule} from "./rule.ts"
+import {rule} from "./rule.ts";
 
 const log = (...args: any[]) => {
     const now = new Date()
@@ -11,40 +11,48 @@ const log = (...args: any[]) => {
     console.log(at.padEnd(22, " "), ...args)
 }
 
+export namespace util {
+
+    /**
+     * 延时函数
+     * @param delay 延时毫秒数
+     */
+    export const sleep = (delay: number) => new Promise((resolve) => setTimeout(resolve, delay))
+
+    export const promiseToStringArrayLimit = async (taskName: string, taskCount: number, limit: number, showTaskStep: boolean, process: (taskIndex: number) => Promise<T>): T[] => {
+        const result: T[] = []
+
+        log(`[task] [${taskName}] begin ${taskCount} tasks`)
+        for (let i = 0; i < taskCount; i += limit) {
+            const currentTasks: Promise<string[]> = []
+            for (let j = 0; j < limit && i + j < taskCount; j++) {
+                const taskIndex = i + j
+                if(showTaskStep) {
+                    log(`[task] [${taskName}] ${taskIndex + 1}/${taskCount}`)
+                }
+                currentTasks.push(process(taskIndex))
+            }
+            const taskResult = await Promise.all(currentTasks)
+            result.push(...taskResult)
+        }
+        log(`[task] [${taskName}] finish ${taskCount} tasks`)
+        return result
+    };
+
+}
 
 export namespace style {
 
     /**
      * 表示数值，有些值不能整除，使用 from/to/scale 进行描述
      */
-    interface ValueRange {
+    export interface ValueRange {
         from: number
         to: number
         scale: number
         unit: string
     }
 
-    /**
-     * CSS 基础配置
-     */
-    interface CssConfig {
-        /**
-         * 默认值
-         */
-        default: { [index: string]: string; }
-        /**
-         * 根元素，用于声明变量
-         */
-        root: { [index: string]: string; },
-        /**
-         * 单位一的表示
-         */
-        one: ValueRange
-        /**
-         * 主题设置
-         */
-        theme: { [index: string]: string[]; }
-    }
 
     /**
      * 原子样式规则
@@ -84,6 +92,13 @@ export namespace style {
         syntaxRegex?: RegExp
     }
 
+    export interface StyleInfo {
+        units: string[],
+        colors: string[],
+        styles: string[],
+        warnings: string[]
+    }
+
 
     interface ExprPara {
         unit?: string
@@ -94,62 +109,8 @@ export namespace style {
 
     interface StyleRuleSetting {
         ruleMap: { [index: string]: AtomicStyleRule, }
-        // ruleNames: string[]
         rules: AtomicStyleRule[]
         themes: string[]
-    }
-
-    const DefaultConfig: CssConfig = {
-        default: {
-            "unit": "full,d5,1,2,4,8,10,20,24,28,32,36,48,64,72,80,96,120,144,256,512",
-            "theme": Object.keys(theme.Themes).join(",")
-        },
-        root: {
-            "wx+xcx": "page"
-        },
-        one: {from: 1, to: 7.5, scale: 3, unit: "vmin"},
-        theme: theme.Themes
-    }
-
-
-    export const generateCssContent = (browser: string, classExprs: string[], config: CssConfig = DefaultConfig): { varContent: string, styleContent: string, warnings: string[] } => {
-        try {
-            const styleList: string[] = [];
-
-            let unitList: string[] = []
-            let colorList: string[] = []
-
-            const ruleSetting = initRuleSetting(rule.DefaultStyles, Object.keys(DefaultConfig.theme));
-            log(`[task] read ${ruleSetting.rules.length} rules`)
-            log(`[task] try to generate [${classExprs.length}] styles`)
-
-            const warnings: string[] = []
-            classExprs.sort().forEach((classExpr: string, index: number) => {
-                const {units, colors, styles} = makeCssForExpr(classExpr, ruleSetting, warnings)
-
-                const order = `${index + 1}/${classExprs.length}`.padStart(8, " ")
-                const unitString = units.length == 0 ? "" : `units = ${units.join(",")}`
-                const colorString = colors.length == 0 ? "" : `colors = ${colors.join(",")}`
-                log(`[task] ${order}`, classExpr.padEnd(20, " "), unitString, colorString)
-
-                unitList.push(...units)
-                colorList.push(...colors)
-                styleList.push(...styles)
-            })
-            unitList = unitList.compact().unique().sort()
-            log(`[task] found total [${unitList.length}] units [${unitList.join(",")}]`)
-            colorList = colorList.compact().unique().sort()
-            const vars = generateVars(browser, unitList, colorList, config)
-
-            if (warnings.length == classExprs.length) {
-                return {varContent: "", styleContent: "", warnings}
-            }
-
-            return {varContent: vars, styleContent: styleList.join("\n"), warnings}
-        } catch (e) {
-            console.error(e)
-            return {varContent: "", styleContent: `${e}`, warnings: [e.toString()]}
-        }
     }
 
     const extraPara = (expression: string, rule: AtomicStyleRule | undefined): ExprPara | undefined => {
@@ -209,11 +170,10 @@ export namespace style {
     }
 
 
-    const makeCssForExpr = (expression: string, ruleSetting: StyleRuleSetting, warnings: string[]): { units: string[], colors: string[], styles: string[] } => {
+    export const makeCssForExpr = (expression: string, ruleSetting: StyleRuleSetting): style.StyleInfo => {
         let rules = searchRulesByExpr(expression, ruleSetting)
         if (rules == undefined || rules.length == 0) {
-            warnings.push(expression)
-            return {units: [], colors: [], styles: []}
+            return {units: [], colors: [], styles: [], warnings: [expression]}
         }
 
         const classRuleStack = rules.map((rule: AtomicStyleRule) => {
@@ -231,9 +191,6 @@ export namespace style {
             }
 
             const para: ExprPara = extraPara(classRule.classExpr, classRule.rule)
-            // if (para?.color) {
-            //     console.log("colors result", classRule.classExpr, para)
-            // }
             if (para != undefined) {
                 if (para.unit) {
                     units.push(para.unit)
@@ -270,7 +227,7 @@ export namespace style {
             styles.push("}")
         }
 
-        return {units: units.compact().unique(), colors: colors.compact().unique(), styles}
+        return {units: units.compact().unique(), colors: colors.compact().unique(), styles, warnings: []}
     }
 
     const wrapPara = (expression: string, para?: ExprPara | undefined): string => {
@@ -297,7 +254,7 @@ export namespace style {
      * @param rules 样式规则数组
      * @param themes 主题名称
      */
-    const initRuleSetting = (rules: AtomicStyleRule[], themes: string[]): StyleRuleSetting => {
+    export const initRuleSetting = (rules: AtomicStyleRule[], themes: string[]): StyleRuleSetting => {
         const ruleMap: { [index: string]: AtomicStyleRule } = {}
         rules.forEach((rule: AtomicStyleRule) => {
 
@@ -341,16 +298,12 @@ export namespace style {
 
     /**
      * 生成变量的CSS
-     * @param plat 运行环境简称
      * @param units 全部数值
      * @param colors
-     * @param config CSS基础配置
+     * @param rootElementName
+     * @param one
      */
-    const generateVars = (plat: string, units: string[], colors: string[], config: CssConfig): string => {
-        const root = config.root[plat]
-        if (!root) {
-            throw Error(`missing root for ${plat}`)
-        }
+    export const generateVars = (units: string[], colors: string[], rootElementName: string, one: ValueRange): string => {
 
         const clearFunctions = [
             {rule: /d/g, value: "0."},
@@ -361,28 +314,19 @@ export namespace style {
         units = units.sort((left: string, right: string) => getUnitNumber(left) - getUnitNumber(right))
 
         const vars: string[] = []
-        vars.push(`${root} {`)
+        vars.push(`${rootElementName} {`)
         units.forEach((unit: string) => {
-            vars.push(`--unit-${unit}: ${calcUnitValue(unit, config)};`)
+            vars.push(`--unit-${unit}: ${calcUnitValue(unit, one)};`)
         })
 
-        // vars.push("")
-        // vars.push(`--color-primary: rgb(${theme.Colors.primary});`)
-        // vars.push(`--color-white: rgb(${theme.Colors.white});`)
-        // vars.push(`--color-black: rgb(${theme.Colors.black});`)
-        // vars.push("")
-
         colors.forEach((color: string) => {
-            // color = color.replace("primary", "primary-1")
-            //     .replace("white", "white-1")
-            //     .replace("black", "black-1")
             const colorInfo = color.match(/(?<theme>[a-z]+)-(?<order>\d+)(-(?<alpha>\d+))?/)?.groups
             if (!colorInfo) {
                 throw Error(`invalid color ${color}`)
             }
 
             const {theme, order, alpha} = colorInfo
-            vars.push(`--color-${color}: ${generateColorVar(theme, order, alpha, config)};`)
+            vars.push(`--color-${color}: ${generateColorVar(theme, order, alpha)};`)
         })
 
 
@@ -393,9 +337,9 @@ export namespace style {
     /**
      * calc unit value
      * @param unit unit number value or percent value
-     * @param config unit one's config
+     * @param one unit one's config
      */
-    const calcUnitValue = (unit: string, config: CssConfig): string => {
+    const calcUnitValue = (unit: string, one: ValueRange): string => {
         // zero means nothing without rpx or vm etc.
         if (unit == "0") {
             return "0"
@@ -412,8 +356,8 @@ export namespace style {
         // number value
         if (/^([\d\\.]+)$/.test(unit)) {
             const numberValue: Number = Number(unit)
-            const scale = Math.pow(10, config.one.scale)
-            return Math.round(numberValue * config.one.from * scale / config.one.to) / scale + config.one.unit
+            const scale = Math.pow(10, one.scale)
+            return Math.round(numberValue * one.from * scale / one.to) / scale + one.unit
         }
 
         // percent value
@@ -429,13 +373,12 @@ export namespace style {
      * @param themeName 主题名称
      * @param colorOrder
      * @param alpha
-     * @param config CSS基础配置
      */
-    const generateColorVar = (themeName: string, colorOrder: string, alpha: string, config: CssConfig): string => {
+    const generateColorVar = (themeName: string, colorOrder: string, alpha: string): string => {
         if (themeName == "") {
             throw Error("missing theme name")
         }
-        if (!config.theme[themeName]) {
+        if (!theme.Themes[themeName]) {
             throw Error(`missing theme ${themeName}`)
         }
         const colors = theme.Themes[themeName] as string[]
@@ -445,6 +388,7 @@ export namespace style {
         if (!colorOrder) {
             return `rgb(${colors[0]})`
         }
+
         const orderValue = parseInt(colorOrder) - 1
         if (orderValue >= 0 && orderValue <= colors.length - 1) {
             if (alpha == undefined || alpha == 1) {
@@ -462,7 +406,17 @@ export namespace style {
 
 namespace wx {
 
+    export interface PageInfo {
+        page: string,
+        tsPath?: string,
+        jsPath?: string,
+        cssPath?: string
+    }
+
     export interface FileConfig {
+
+        workDir: string
+
         miniProgramDir: string
         componentDir: string
         appConfigFile: string
@@ -470,16 +424,83 @@ namespace wx {
         cssVarFile: string
         cssOutputFile: string
         cssInputFiles: string[]
+
+        fileExtension: {
+            page: string
+            ts: string
+            js: string
+            css: string
+        }
+
+        cssOption: {
+            rootElementName: string
+            componentGlobalCss: RegExp
+            one: style.ValueRange
+        }
+
+        watchOptions: {
+            delay: number,
+            fileTypes: string[],
+            refreshCount: number
+        }
+
+        debugOptions: {
+            showPageClassNames: boolean
+            showPageClassAttribute: boolean
+            showCssStyleNames: boolean
+            showPageTaskBegin: boolean
+            showPageTaskResult: boolean
+            showStyleTaskResult: boolean
+            showTaskStep: boolean
+        }
+
+        processOption: {
+            promiseLimit: number
+        }
     }
 
-    const Config: FileConfig = {
+    export const DefaultConfig: FileConfig = {
         miniProgramDir: "miniprogram",
         componentDir: "components",
         appConfigFile: "app.json",
         cssMainFile: "app.wxss",
         cssVarFile: "var.wxss",
         cssOutputFile: "mini.wxss",
-        cssInputFiles: ["font.wxss"]
+        cssInputFiles: ["font.wxss"],
+        workDir: "",
+        watchOptions: {
+            delay: 200,
+            fileTypes: [".wxml"],
+            refreshCount: 0
+        },
+
+        fileExtension: {
+            page: ".wxml",
+            ts: ".ts",
+            js: ".js",
+            css: ".wxss"
+        },
+
+
+        cssOption: {
+            rootElementName: "page",
+            componentGlobalCss: /addGlobalClass:\s*true/,
+            one: {from: 1, to: 7.5, scale: 3, unit: "vmin"},
+        },
+
+        debugOptions: {
+            showPageClassNames: false,
+            showPageClassAttribute: false,
+            showCssStyleNames: false,
+            showPageTaskBegin: false,
+            showPageTaskResult: false,
+            showStyleTaskResult: false,
+            showTaskStep: false
+        },
+
+        processOption: {
+            promiseLimit: 5
+        }
     }
 
     /**
@@ -508,7 +529,7 @@ namespace wx {
         return result ? result.filter(m => m.length > 1 && !/[A-Z]/.test(m)) : []
     }
 
-    const parseClassItemFromPage = (page: string): string[] => {
+    const parseClassItemFromPage = (page: string, config: FileConfig): string[] => {
         let classNames: string[] = []
         const xml = Deno.readTextFileSync(page)
         let attrName = ""
@@ -519,7 +540,10 @@ namespace wx {
             const isValidAttr = attrName == "class" || attrName == "hover-class" || attrName == "placeholder-class"
             if (isValidAttr && token.type == TokenType.ATTR_VALUE) {
                 const items = extractClassNames(token.getValue())
-                log(`[check]${"".padEnd(9, " ")}parse class attribute [${token.getValue()}] to [${items.join(",")}]`)
+
+                if (config.debugOptions.showPageClassAttribute) {
+                    log(`[check]${"".padEnd(9, " ")}parse class attribute [${token.getValue()}] to [${items.join(",")}]`)
+                }
                 classNames.push(...items)
             }
         }
@@ -542,230 +566,345 @@ namespace wx {
         }
     }
 
-    const parseComponentClassNames =  (page: string, componentsPages: string[], config: wx.FileConfig): string[] => {
-        if (page.endsWith(".wxml")) {
-            log(`[check] process component page ${page}`)
-            let jsFileName = ""
-            const tsPage = page.replace(".wxml", ".ts")
-            if (componentsPages.indexOf(tsPage) == -1) {
-                const jsPage = page.replace(".wxml", ".js")
-                if (componentsPages.indexOf(jsPage) == -1) {
-                    return
-                }
-                jsFileName = jsPage
-            } else {
-                jsFileName = tsPage
+    export const parseComponentClassNames = (pageInfo: PageInfo, componentsPages: string[], config: wx.FileConfig): string[] => {
+
+        if (config.debugOptions.showPageTaskBegin) {
+            log(`[task] process component page ${page}`)
+        }
+        let jsFileName = ""
+        if (pageInfo.tsPath) {
+            jsFileName = pageInfo.page.replace(config.fileExtension.page, config.fileExtension.ts)
+        } else if (pageInfo.jsPath) {
+            jsFileName = pageInfo.page.replace(config.fileExtension.page, config.fileExtension.js)
+        }
+        if (!jsFileName) {
+            return []
+        }
+
+        const pageContent: string = Deno.readTextFileSync(jsFileName)
+
+        if (!config.cssOption.componentGlobalCss.test(pageContent)) {
+            if (config.debugOptions.showPageTaskResult) {
+                log(`[data] ignore ${page} without global class option`)
             }
+            return []
+        }
 
-            const pageContent: string =  Deno.readTextFileSync(jsFileName)
+        const classNames: string[] = parseClassItemFromPage(pageInfo.page, config)
+        if (config.debugOptions.showPageClassNames) {
+            log(`[data] found ${classNames.length} class names in ${page}`)
+        }
 
-            if (/addGlobalClass:\s*true/.test(pageContent)) {
-                log(`[check]    detect global class`)
-                const cssPage = page.replace(".wxml", ".wxss")
-                if (componentsPages.indexOf(cssPage) > -1) {
-                    const classNames: string[] = parseClassItemFromPage(page)
-                    const styleNames: string[] = readClassNamesFromCssFile(cssPage) || []
-                    const toCreateClassNames = classNames.diff(styleNames)
+        let styleNames: string[] = []
+        if (pageInfo.cssPath) {
+            const cssPage = pageInfo.page.replace(config.fileExtension.page, config.fileExtension.css)
 
-                    log("[check]    find xxx", toCreateClassNames)
-                    return toCreateClassNames
-                }
+            styleNames = readClassNamesFromCssFile(cssPage) || []
+            if (config.debugOptions.showCssStyleNames) {
+                log(`[data] found ${styleNames.length} styles names in ${page}`)
             }
         }
-        return []
+
+        const toCreateClassNames = classNames.diff(styleNames)
+        if (config.debugOptions.showPageTaskResult) {
+            log(`[data] add create styles task, [${toCreateClassNames.length}] class names, [${toCreateClassNames.join(",")}] from ${page}`)
+        }
+        return toCreateClassNames
     }
 
-    const parseComponentGlobalClassNames = async (workDir: string, config: wx.FileConfig): string[] => {
+    export const parseComponentPages = async (config: wx.FileConfig): PageInfo[] => {
         // read all components files
-        const componentsDirs: string[] = [`${workDir}/${config.componentDir}`]
+        const componentsStack: string[] = [`${config.workDir}/${config.componentDir}`]
         const componentsPages: string[] = []
 
-        while (componentsDirs.length > 0) {
-            const curDir = componentsDirs.shift()
+        while (componentsStack.length > 0) {
+            const curDir = componentsStack.shift()
             for await (const dirEntry of Deno.readDir(curDir)) {
                 if (dirEntry.isDirectory) {
-                    componentsDirs.unshift(`${curDir}/${dirEntry.name}`)
+                    componentsStack.unshift(`${curDir}/${dirEntry.name}`)
                 } else if (dirEntry.isFile) {
                     componentsPages.push(`${curDir}/${dirEntry.name}`)
                 }
             }
         }
-        console.log("componentsPages", componentsPages)
 
-        let classNames: string[] = componentsPages.map((page: string) => parseComponentClassNames(page, componentsPages, config))
-        classNames = classNames.flat().compact().unique()
-
-        console.log("classNames", classNames)
-        return classNames
+        return componentsPages.filter((page: string) => page.endsWith(config.fileExtension.page))
+            .map((page: string): PageInfo => {
+                return {
+                    page,
+                    jsPath: componentsPages.indexOf(page.replace(config.fileExtension.page, config.fileExtension.js)) > -1,
+                    tsPath: componentsPages.indexOf(page.replace(config.fileExtension.page, config.fileExtension.ts)) > -1,
+                    cssPath: componentsPages.indexOf(page.replace(config.fileExtension.page, config.fileExtension.css)) > -1,
+                }
+            })
     }
 
-    export const generateCssFile = async (workDir: string, generateCount: number = false, config: FileConfig = Config, engine: (browserName: string, classItems: string[]) => string = style.generateCssContent): number => {
-
-        const pages = await Deno.readTextFile(`${workDir}/${config.appConfigFile}`)
+    export const parseMiniProgramPages = async (config: FileConfig): string[] => {
+        const pages = await Deno.readTextFile(`${config.workDir}/${config.appConfigFile}`)
             .then((data: string) => JSON.parse(data))
             .then((app: any) => [...app.pages, ...(app.subpackages || []).map((pkg: any) => pkg.pages.map((page: string) => `${pkg.root}/${page}`)).flat()])
-        log(`[check] read wechat mini program pages from config file, found [${pages.length}] pages`)
+        log(`[task] read wechat mini program pages from config file, found [${pages.length}] pages`)
+        return pages.map((page: string) => `${config.workDir}/${page}.wxml`)
+    }
 
-        const globalClassStyleNames: string[] = await [...config.cssInputFiles, config.cssMainFile].map((filename: string) => {
-            const result = readClassNamesFromCssFile(`${workDir}/${filename}`)
+    export const parseGlobalStyleNames = async (config: wx.FileConfig): string[] => {
+        return await [...config.cssInputFiles, config.cssMainFile].map((filename: string) => {
+            const result = readClassNamesFromCssFile(`${config.workDir}/${filename}`)
             if (result == undefined) {
-                log(`[check] missing global css file [${filename}] and ignore`)
+                log(`[task] missing global css file [${filename}] and ignore`)
             } else {
-                log(`[check] read global styles names, found [${result.length}] in [${filename}]`)
+                log(`[task] parse global styles names, found [${result.length}] in [${filename}]`)
             }
             return result
         }).flat().compact().unique()
-        log(`[check] found total [${globalClassStyleNames.length}] global class styles`)
+    }
 
-        let componentClassNames: string[] = await parseComponentGlobalClassNames(workDir, config)
-        log(`[check] components found [${componentClassNames.length}] class names [${componentClassNames.join(",")}]`)
+    export const parsePageClassNames = async (config: FileConfig, pagePath: string): string[] => {
 
-        let missingClassNames: string[] = [...componentClassNames]
-        pages.forEach((page: string, index: number) => {
-            const order = `${index + 1}/${pages.length})`.padStart(7, ' ')
-            const pageEmpty = "".padEnd(9, " ")
+        const pageEmpty = "".padEnd(9, " ")
 
-            log(`[check] ${order} process page [${page}]`)
+        if (config.debugOptions.showPageTaskBegin) {
+            log(`[check] process page [${pagePath}]`)
+        }
 
-            const classNames: string[] = parseClassItemFromPage(`${workDir}/${page}.wxml`)
+        const classNames: string[] = parseClassItemFromPage(pagePath, config)
+        if (config.debugOptions.showPageClassNames) {
             log(`[check]${pageEmpty}found page class names [${classNames.length}] [${classNames.join(",")}]`)
+        }
 
-            const styleNames = readClassNamesFromCssFile(`${workDir}/${page}.wxss`)
-            if (styleNames == undefined) {
-                log(`[check]${pageEmpty}missing page class file [${page}.wxss] and ignore`)
-            } else {
+        const cssFilePath = pagePath.replace(".wxml", ".wxss")
+        const styleNames = readClassNamesFromCssFile(cssFilePath)
+        if (styleNames == undefined) {
+            if (config.debugOptions.showPageTaskResult) {
+                log(`[check]${pageEmpty}missing page class file [${cssFilePath}] and ignore`)
+            }
+        } else {
+            if (config.debugOptions.showPageTaskResult) {
                 log(`[check]${pageEmpty}found page style names [${styleNames.length}] [${styleNames.join(",")}]`)
             }
+        }
 
-            const missingStyleNames = classNames.diff(styleNames).diff(globalClassStyleNames)
-            if (missingStyleNames.length == 0) {
+        const missingStyleNames = classNames.diff(styleNames)
+        if (missingStyleNames.length == 0) {
+            if (config.debugOptions.showPageTaskResult) {
                 log(`[check]${pageEmpty}no styles to create`)
-            } else {
-                log(`[check]${pageEmpty}need to create [${missingStyleNames.length}] styles [${missingStyleNames.join(",")}]`)
-                missingClassNames.push(...missingStyleNames)
             }
-        })
-
-        const cssOutputFileName = `${workDir}\\${config.cssOutputFile}`
-
-        missingClassNames = missingClassNames.unique()
-        if (missingClassNames.length == 0) {
-            log(`[check] no global styles to create`)
-            return Promise.resolve(1)
-        }
-
-        log(`[check] total to create [${missingClassNames.length}] global styles`)
-
-
-        let generatedClasItems: string[] = []
-        if (generateCount > 0) {
-            generatedClasItems = (readClassNamesFromCssFile(cssOutputFileName) || []).compact().unique()
-            log(`[check] found [${generatedClasItems.length}] style items in [${config.cssOutputFile}]`)
         } else {
-            log(`[check] skip style names in [${config.cssOutputFile}]`)
-        }
-
-        const newClassNames = missingClassNames.diff(generatedClasItems)
-        if (newClassNames.length == 0) {
-            log(`[check] no class items to create`)
-            return Promise.resolve(2)
-        }
-
-        log(`[task] create [${newClassNames.length}] class items [${newClassNames.join(",")}]`)
-
-        if (generateCount > 0) {
-            let {content, warnings} = engine("wx+xcx", newClassNames)
-            if (warnings.length == newClassNames.length) {
-                log(`[task] no updates with warnings`)
-                return Promise.resolve(4)
+            if (config.debugOptions.showPageTaskResult) {
+                log(`[check]${pageEmpty}need to create [${missingStyleNames.length}] styles [${missingStyleNames.join(",")}]`)
             }
         }
-        let {varContent, styleContent, warnings} = engine("wx+xcx", missingClassNames)
+        return missingStyleNames
+    }
 
-        if (warnings.length > 0) {
-            log(`[warning] total found ${warnings.length} class names without rules, ${warnings.join(",")}`)
-        }
-        if (styleContent.length == 0) {
-            log(`[task] no updates`)
-            return Promise.resolve(3)
-        }
-        if (warnings.length == newClassNames.length) {
-            log(`[task] no updates with warnings`)
-            return Promise.resolve(4)
-        }
-
-        log(`[task] begin to write output file`)
-        Deno.writeTextFileSync(config.cssVarFile, varContent)
-        log(`[task] save ${varContent.length} chars to ${config.cssVarFile}`)
-        Deno.writeTextFileSync(cssOutputFileName, styleContent)
-        log(`[task] save ${styleContent.length} chars to ${cssOutputFileName}`)
-        return Promise.resolve(0)
+    export const parseCssOutputFileStyleNames = (config: FileConfig): string[] => {
+        //if (config.watchOptions.refreshCount++ == 0) {
+        return []
+        //}
+        // const cssOutputFileName = `${config.workDir}/${config.cssOutputFile}`
+        // let styleNames: string[] = (readClassNamesFromCssFile(cssOutputFileName) || []).compact().unique()
+        // log(`[task] parse style names from [${cssOutputFileName}]`)
+        // return styleNames
     }
 
 
-    export const getWorkDir = async (): string => {
+    export const setMiniProgramOptions = async (customConfig?: FileConfig = {}): FileConfig => {
+        const config: FileConfig = Object.assign({}, DefaultConfig, customConfig)
+        return Promise.resolve(config)
+    }
+
+
+    export const ensureWorkDir = async (config: FileConfig): FileConfig => {
 
         let workDir = Deno.args.length > 0 ? Deno.args[0] : "."
         for await (const dirEntry of Deno.readDir(workDir)) {
-            if (dirEntry.name == Config.miniProgramDir) {
-                log(`working directory found for ${Config.miniProgramDir} at ${workDir}`)
-                return Promise.resolve(`${workDir}\\${Config.miniProgramDir}`)
+            if (dirEntry.name == config.miniProgramDir) {
+                log(`[task] working directory found for ${config.miniProgramDir} at ${workDir}`)
+                config.workDir = `${workDir}\\${config.miniProgramDir}`
+                return Promise.resolve(config)
             }
-            if (dirEntry.name == Config.cssMainFile) {
-                log(`working directory found for ${Config.cssMainFile} at ${workDir}`)
-                return Promise.resolve(workDir)
+            if (dirEntry.name == config.cssMainFile) {
+                log(`[task] working directory found for ${config.cssMainFile} at ${workDir}`)
+                config.workDir = workDir
+                return Promise.resolve(config)
             }
         }
 
-        log(`invalid working directory, can not found ${Config.cssMainFile} or ${Config.miniProgramDir} directory`)
+        log(`[task] invalid working directory, can not found ${config.cssMainFile} or ${config.miniProgramDir} directory`)
         return Promise.reject("should set working directory to wechat mini program dir")
     }
-}
 
-/**
- * 延时函数
- * @param delay 延时毫秒数
- */
-const sleep = (delay: number) => new Promise((resolve) => setTimeout(resolve, delay))
 
-const main = async (workDir: string) => {
-    let count = 0
+    export const watchMiniProgramPageChange = async (config: FileConfig, refreshEvent: (config: FileConfig) => Promise<number>): FileConfig => {
 
-    wx.generateCssFile(workDir, count++)
-    log("[task] wxmp-atomic-css service started")
+        let watcher = Deno.watchFs(config.workDir);
+        let refreshCount: number = 0
+        let refreshWorking: boolean = false
 
-    let watcher = Deno.watchFs(workDir);
-
-    let working: boolean = false
-
-    for await (const event of watcher) {
-        log(">>>> event", event);
-
-        if (working) {
-            continue
-        }
-
-        if (event.paths.filter((m: string) => m.endsWith(".wxml")).length > 0) {
-
-            if (!working) {
-                working = true
-                // watcher.close()
-
-                sleep(200).then(() => {
-                    return wx.generateCssFile(workDir, 1)
-                }).then((result: number) => {
-                    // sleep(200).then(() => {
-                    //     watcher = Deno.watchFs(workDir);
-                    // })
-                    working = false
-                    log(`[task] wxmp-atomic-css refresh ${count++}x, result=${result}`)
-                })
-            }
+        for await (const event of watcher) {
             // log(">>>> event", event);
 
-            // await wx.generateCssFile(workDir, 0)
+            if (refreshWorking) {
+                continue
+            }
+
+            const needRefresh: boolean = event.paths.map((path: string) => path.slice(path.lastIndexOf(".")))
+                .filter((fileExtension: string) => config.watchOptions.fileTypes.indexOf(fileExtension) > -1)
+                .length > 0
+            if (needRefresh && !refreshWorking) {
+                refreshWorking = true
+
+                log(`[file changed] ${event.paths.join(";")}`)
+
+                util.sleep(config.watchOptions.delay)
+                    .then(() => refreshEvent(config))
+                    .then(() => {
+                        refreshWorking = false
+                        log(`[task] wxmp-atomic-css refresh ${++refreshCount}x`)
+                    })
+            }
         }
     }
+
+    export const mergeResult = (values: Awaited<string[]>[]): { missingClassNames: string[], toRemoveClassNames: string[] } => {
+        const globalStyleNames = values[0] as string[]
+        const generatedStyleNames = values[1] as string[]
+        const pageClassNames = values[2] as string[]
+        const componentPageClassNames = values[3] as string[]
+
+        log(`[data] total found [${globalStyleNames.length}] global style names`)
+        log(`[data] total found [${generatedStyleNames.length}] generated style names`)
+        log(`[data] total found [${pageClassNames.length}] class names from pages`)
+        log(`[data] total found [${componentPageClassNames.length}] class names from components`)
+
+        const missingClassNames: string[] = [].merge(pageClassNames).merge(componentPageClassNames)
+            .diff(globalStyleNames).diff(generatedStyleNames).compact().unique().sort()
+
+        const toRemoveClassNames: string[] = [].merge(globalStyleNames).merge(generatedStyleNames)
+            .diff(pageClassNames).diff(componentPageClassNames).compact().unique().sort()
+
+        return {missingClassNames, toRemoveClassNames}
+    }
+
 }
 
-wx.getWorkDir().then(main)
+
+const mainProcess = (config: wx.FileConfig): Promise<number> => {
+    let start = new Date()
+    return Promise.all([
+        wx.parseGlobalStyleNames(config),
+
+        wx.parseCssOutputFileStyleNames(config),
+
+        wx.parseMiniProgramPages(config).then((pages: string[]): Promise<string[]> =>
+            util.promiseToStringArrayLimit("parse-page-class-names", pages.length,
+                config.processOption.promiseLimit, config.debugOptions.showTaskStep,
+                (taskIndex: number) => {
+                return wx.parsePageClassNames(config, pages[taskIndex])
+            }).then((classNames: string[]) => classNames.flat().compact().unique())
+        ),
+
+        wx.parseComponentPages(config).then((componentPages: wx.PageInfo[]): Promise<string[]> =>
+            util.promiseToStringArrayLimit("parse-component-class-names", componentPages.length,
+                config.processOption.promiseLimit, config.debugOptions.showTaskStep,
+                (taskIndex: number) => {
+                return wx.parseComponentClassNames(componentPages[taskIndex], componentPages, config)
+            }).then((classNames: string[]) => classNames.flat().compact().unique())
+        ),
+    ]).then((values: Awaited<string[]>[]) => {
+
+        const {missingClassNames, toRemoveClassNames} = wx.mergeResult(values)
+
+        if (toRemoveClassNames.length > 0) {
+            log(`[data] [${toRemoveClassNames.length}] class names to remove, [${toRemoveClassNames.join(",")}]`)
+        }
+
+        if (missingClassNames.length == 0) {
+            log(`[data] no class names to create`)
+            return Promise.resolve(1)
+        }
+
+        log(`[data] new task for generate [${missingClassNames.length}] class names = [${missingClassNames.join(",")}]`)
+
+
+        const ruleSetting = style.initRuleSetting(rule.DefaultStyles, Object.keys(theme.Themes));
+        log(`[task] read ${ruleSetting.rules.length} rules`)
+
+
+        return util.promiseToStringArrayLimit("generate-style", missingClassNames.length,
+            config.processOption.promiseLimit, config.debugOptions.showTaskStep,
+            (taskIndex: number): Promise<style.StyleInfo> => {
+                const classExpr = missingClassNames[taskIndex]
+                const {units, colors, styles, warnings} = style.makeCssForExpr(classExpr, ruleSetting)
+
+                if (config.debugOptions.showStyleTaskResult) {
+                    const order = "".padStart(12, " ")
+                    const unitString = units.length == 0 ? "" : `units = ${units.join(",")}`
+                    const colorString = colors.length == 0 ? "" : `colors = ${colors.join(",")}`
+                    const warningString = warnings.length == 0 ? "" : `warnings = ${warnings.join(",")}`
+                    log(`[task] ${order}`, classExpr.padEnd(20, " "), unitString, colorString, warningString)
+                }
+
+                return {units, colors, styles, warnings}
+            })
+    }).then((classResultList: style.StyleInfo[]): number => {
+
+        const styles = classResultList.map((m: any) => m.styles).flat()
+
+        const warnings = classResultList.map((m: any) => m.warnings).flat().compact().unique().sort()
+        if (warnings.length == 0 && styles.length == 0) {
+            log(`[data] no updates with warnings`)
+            return Promise.resolve(2)
+        }
+
+        const units = classResultList.map((m: any) => m.units).flat().compact().unique().sort()
+        log(`[data] new task to create [${units.length}] unit vars, [${units.join(",")}]`)
+
+        const colors = classResultList.map((m: any) => m.colors).flat().compact().unique().sort()
+        log(`[data] new task to create [${colors.length}] color vars, [${colors.join(",")}]`)
+
+        log(`[task] begin to write output file`)
+
+        const varsContent = style.generateVars(units, colors, config.cssOption.rootElementName, config.cssOption.one)
+        // log(`[data] varsContent=${varsContent}`)
+
+        Deno.writeTextFileSync(`${config.workDir}/${config.cssVarFile}`, varsContent)
+        log(`[task] save ${varsContent.length} chars to ${config.cssVarFile}`)
+
+        const styleContent = classResultList.map((m: any) => m.styles).flat().join("\n")
+        // log(`[data] styleContent=${styleContent}`)
+        Deno.writeTextFileSync(`${config.workDir}/${config.cssOutputFile}`, styleContent)
+        log(`[task] save ${styleContent.length} chars to ${config.cssOutputFile}`)
+
+        return Promise.resolve(0)
+    }).then((result: number) => {
+        log(`[data] job done, cost ${new Date().getTime() - start.getTime()} ms, result = ${result}`)
+    })
+}
+
+
+(function () {
+    log("==========================================================");
+    log("   wxmp-atomic-css: wechat mini program atomic css kit");
+    log("==========================================================");
+    log("starting wxmp-atomic-css");
+    const sigIntHandler = () => {
+        console.log("interrupted!");
+        Deno.exit();
+    };
+    Deno.addSignalListener("SIGINT", sigIntHandler);
+
+    wx.setMiniProgramOptions()
+        .then((config: wx.FileConfig) => wx.ensureWorkDir(config))
+        .then((config: wx.FileConfig) => {
+            log("[data] config: ", config)
+            log("[task] start auto generation after started");
+
+            mainProcess(config)
+                .then(() => log("service ready, Press Ctrl-C to exit"))
+                .then(() => wx.watchMiniProgramPageChange(config, mainProcess))
+
+        }).catch((e: any) => log(`error: ${e}`))
+})()
+
+
