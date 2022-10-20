@@ -75,36 +75,47 @@ export namespace style {
          */
         desc?: string
         /**
-         * 类名语法规则，允许使用[U]-数值,[C]-颜色,[N]-数
+         * class name syntax, could use vars, [U]-unit, [C]-color, [N]-number,
+         * [A]-alpha number, with decimal point as prefix is the true value
          */
         syntax: string
         /**
-         * 如果由其他规则组合而成，填写其他规则的 syntax
+         * classes name which in global css file and compose to the new style
          */
         compose?: string[]
         /**
-         * 如果是直接表示规则，填写具体到样式信息
+         * style declaration for class names, required if compose is undefined or empty
          */
         expr?: string,
         /**
-         * 如果规则涉及到数值，填写数值
+         * dependencies of style names
+         */
+        dependencies?: string[],
+        /**
+         * units includes by expr, effected on running
          */
         units?: string[],
         /**
-         * 如果规则涉及到颜色，填写数值
+         * colors includes by expr, effected on running
          */
         colors?: string[],
         /**
-         * 动态规则的匹配表达式
+         * regExtp for dynamic expr, which includes [, effected on running
          */
         syntaxRegex?: RegExp
     }
 
     export interface StyleInfo {
+        // ref units
         units: string[],
+        // ref colors
         colors: string[],
+        // final declaration of the style
         styles: string[],
-        warnings: string[]
+        // warnings occurs on generating style info
+        warnings: string[],
+        // dependencies of classNames, e.g. keyframes
+        classNames: string[]
     }
 
 
@@ -147,10 +158,10 @@ export namespace style {
             }
             if (para.color) {
                 if (para.number == undefined) {
-                    para.number = 1
+                    para.number = "1"
                 } else if (theme.Themes[para.color].length == 1) {
                     para.alpha = para.number
-                    para.number = 1
+                    para.number = "1"
                 }
             }
         }
@@ -168,7 +179,7 @@ export namespace style {
             })
         }
         // 直接查询
-        let rule = ruleSetting.ruleMap[expression]
+        const rule = ruleSetting.ruleMap[expression]
         if (rule) {
             return [rule]
         }
@@ -181,7 +192,7 @@ export namespace style {
     export const makeCssForExpr = (expression: string, ruleSetting: StyleRuleSetting): style.StyleInfo => {
         let rules = searchRulesByExpr(expression, ruleSetting)
         if (rules == undefined || rules.length == 0) {
-            return {units: [], colors: [], styles: [], warnings: [expression]}
+            return {units: [], colors: [], styles: [], warnings: [expression], classNames: []}
         }
 
         const classRuleStack = rules.map((rule: AtomicStyleRule) => {
@@ -191,6 +202,7 @@ export namespace style {
         const styles: string[] = []
         const units: string[] = []
         const colors: string[] = []
+        const classNames: string[] = []
 
         while (classRuleStack.length > 0) {
             const classRule = classRuleStack.shift()
@@ -211,12 +223,7 @@ export namespace style {
                     }
                 }
             }
-            if (classRule.rule.expr) {
-                units.push(...(classRule.rule?.units || []))
-                colors.push(...(classRule.rule?.colors || []))
-                const style = wrapPara(classRule.rule.expr, para)
-                styles.push(style)
-            } else if (classRule.rule.compose) {
+            if (classRule.rule.compose) {
                 classRule.rule.compose.forEach((command: string) => {
                     const newClassExpr = wrapPara(command, para)
                     let newRules = searchRulesByExpr(newClassExpr, ruleSetting)
@@ -226,7 +233,15 @@ export namespace style {
                         classRuleStack.unshift({classExpr: newClassExpr, rule})
                     })
                 })
-
+            }
+            if (classRule.rule.expr) {
+                units.push(...(classRule.rule?.units || []))
+                colors.push(...(classRule.rule?.colors || []))
+                const style = wrapPara(classRule.rule.expr, para)
+                styles.push(style)
+            }
+            if (classRule.rule.dependencies) {
+                classNames.push(...classRule.rule.dependencies)
             }
         }
 
@@ -235,7 +250,7 @@ export namespace style {
             styles.push("}")
         }
 
-        return {units: units.compact().unique(), colors: colors.compact().unique(), styles, warnings: []}
+        return {units: units.compact().unique(), colors: colors.compact().unique(), styles, warnings: [], classNames}
     }
 
     const wrapPara = (expression: string, para?: ExprPara | undefined): string => {
