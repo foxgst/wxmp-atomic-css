@@ -913,7 +913,7 @@ const mainProcess = (config: wx.WxRunningConfig): Promise<number> => {
     log("starting wxmp-atomic-css");
 
     const sigIntHandler = () => {
-        console.log("interrupted!");
+        console.log("wxmp-atomic-css service closed");
         Deno.exit();
     };
     Deno.addSignalListener("SIGINT", sigIntHandler);
