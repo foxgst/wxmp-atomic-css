@@ -769,7 +769,7 @@ namespace wx {
         for await (const dirEntry of Deno.readDir(workDir)) {
             if (dirEntry.name == config.miniProgramDir) {
                 log(`[task] working directory found for ${config.miniProgramDir} at ${workDir}`)
-                config.workDir = `${workDir}\\${config.miniProgramDir}`
+                config.workDir = `${workDir}/${config.miniProgramDir}`
                 return Promise.resolve(config)
             }
             if (dirEntry.name == config.cssMainFile) {
