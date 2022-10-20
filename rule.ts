@@ -700,23 +700,47 @@ export namespace rule {
         },
         {
             package: "transform.animate.ext",
+            syntax: "@keyframes spin",
+            expr: "from { transform: rotate(0deg); } to { transform: rotate(360deg); }",
+        },
+        {
+            package: "transform.animate.ext",
+            syntax: "@keyframes ping",
+            expr: "75%, 100% { transform: scale(2); opacity: 0; }",
+        },
+        {
+            package: "transform.animate.ext",
+            syntax: "@keyframes pulse",
+            expr: "0%, 100% { opacity: 1; } 50% { opacity: 0.5; }",
+        },
+        {
+            package: "transform.animate.ext",
+            syntax: "@keyframes bounce",
+            expr: "0%, 100% { transform: translateY(-25%); animation-timing-function: cubic-bezier(0.8, 0, 1, 1); } 50% { transform: translateY(0); animation-timing-function: cubic-bezier(0, 0, 0.2, 1); }",
+        },
+        {
+            package: "transform.animate.ext",
             syntax: "animate-spin",
-            expr: "animation: spin 1s linear infinite; @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } };",
+            expr: "animation: spin 1s linear infinite;",
+            dependencies: ["@keyframes spin"]
         },
         {
             package: "transform.animate.ext",
             syntax: "animate-ping",
-            expr: "animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite; @keyframes ping { 75%, 100% { transform: scale(2); opacity: 0; } };",
+            expr: "animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;",
+            dependencies: ["@keyframes ping"]
         },
         {
             package: "transform.animate.ext",
             syntax: "animate-pulse",
-            expr: "animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } };",
+            expr: "animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;",
+            dependencies: ["@keyframes pulse"]
         },
         {
             package: "transform.animate.ext",
             syntax: "animate-bounce",
-            expr: "animation: bounce 1s infinite; @keyframes bounce { 0%, 100% {  transform: translateY(-25%); animation-timing-function: cubic-bezier(0.8, 0, 1, 1); } 50% { transform: translateY(0); animation-timing-function: cubic-bezier(0, 0, 0.2, 1); } };",
+            expr: "animation: bounce 1s infinite;",
+            dependencies: ["@keyframes bounce"]
         },
     ]
 }
