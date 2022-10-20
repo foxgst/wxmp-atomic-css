@@ -22,7 +22,7 @@ export namespace util {
     /**
      * mark a timestamp and return escaped time
      */
-    export const timing = (): number => {
+    export const timing = (): any => {
         const at = new Date().getTime()
         return {at, es: () => new Date().getTime() - at}
     }
