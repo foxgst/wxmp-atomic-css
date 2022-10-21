@@ -2,6 +2,7 @@ import {log} from "./util.ts";
 import {AtomicStyleRule, StyleRuleSetting} from "./data.rule.ts";
 import {StyleInfo, UnitValueDeclaration} from "./data.config.ts";
 import {ThemeMap} from "./data.theme.ts";
+import {getRuleSetting} from "./mod.wx.ts";
 
 /**
  * parameters used a property value

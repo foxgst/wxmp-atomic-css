@@ -51,10 +51,16 @@ export const arrayMap = <Type>(elementArray: Type[], keyFunction: (a: Type) => s
  */
 export const sleep = (delay: number) => new Promise((resolve) => setTimeout(resolve, delay))
 
+
+export interface Timing {
+    at: number
+    es: () => number
+}
+
 /**
  * mark a timestamp and return escaped time
  */
-export const timing = (): { at: number, es: () => number } => {
+export const timing = (): Timing => {
     const at = new Date().getTime()
     return {at, es: () => new Date().getTime() - at}
 }
@@ -94,14 +100,14 @@ export const promiseLimit = async <T>(taskName: string, taskCount: number, proce
 };
 
 
-export const readDataFile = <Type> (filePath: string): Promise<Type> => {
-    if(filePath.startsWith("http")) {
+export const readDataFile = <Type>(filePath: string): Promise<Type> => {
+    if (filePath.startsWith("http")) {
         return fetch(filePath)
             .then((response) => response.json())
             .then((json) => json as Type);
     }
     return Deno.readTextFile(filePath)
-        .then((response)=> JSON.parse(response))
+        .then((response) => JSON.parse(response))
         .then((json) => json as Type);
 }
 

@@ -1,11 +1,11 @@
 import {htmltok, TokenType} from "https://deno.land/x/htmltok@v0.0.3/private/htmltok.ts";
 import * as css from "https://deno.land/x/css@0.3.0/mod.ts";
 import {Rule} from "https://deno.land/x/css@0.3.0/mod.ts";
-import {log, sleep} from "./util.ts";
-import {readAndInitRuleSetting, StyleRuleSetting} from "./data.rule.ts";
-import {readThemes, ThemeMap} from "./data.theme.ts";
+import {log, promiseLimit, sleep, Timing} from "./util.ts";
+import {readAndInitRuleSetting, rulesToString, StyleRuleSetting} from "./data.rule.ts";
+import {readThemes, ThemeMap, themesToString} from "./data.theme.ts";
 import {OptionalRunningConfig, readConfig, StyleInfo, WxRunningConfig} from "./data.config.ts";
-import {generateVars} from "./mod.style.ts";
+import * as style from "./mod.style.ts";
 
 export interface PageInfo {
     page: string,
@@ -187,7 +187,7 @@ export const parseGlobalStyleNames = async (config: WxRunningConfig): Promise<st
     }).flat().compact().unique()
 }
 
-export const parsePageClassNames = (config: WxRunningConfig, pagePath: string): Promise<string[]> => {
+export const parsePageClassNames = (pagePath: string, config: WxRunningConfig): Promise<string[]> => {
 
     const pageEmpty = "".padEnd(9, " ")
 
@@ -240,7 +240,26 @@ export const parseCssOutputFileStyleNames = (config: WxRunningConfig): Promise<s
 export const readRunningConfig = async (configFilePath: string, customConfig?: OptionalRunningConfig): Promise<WxRunningConfig> => {
     const runningConfig = await readConfig(configFilePath)
     const config: WxRunningConfig = Object.assign({}, runningConfig, customConfig || {})
+
+
     return Promise.resolve(config)
+}
+
+export const printRunningConfig = async (config: WxRunningConfig): Promise<WxRunningConfig> => {
+
+    if (config.debugOption.printConfigInfo) {
+        log("[data] config: ", config)
+    }
+    const themeMap = await getThemeMap(config)
+    if (config.debugOption.printThemes) {
+        log("[data] themes: ", themesToString(themeMap))
+    }
+    const ruleSetting = await getRuleSetting(config)
+    if (config.debugOption.printRule) {
+        log("[data] rules: ", rulesToString(ruleSetting.rules))
+    }
+
+    return config
 }
 
 
@@ -366,7 +385,7 @@ export const save = async (classResultList: StyleInfo[], config: WxRunningConfig
     log(`[task] begin to write output file`)
 
     const themeMap = await getThemeMap(config)
-    const varsContent = generateVars(units, colors, config.cssOption.rootElementName, config.cssOption.one, themeMap)
+    const varsContent = style.generateVars(units, colors, config.cssOption.rootElementName, config.cssOption.one, themeMap)
     if (config.debugOption.showFileContent) {
         log(`[data] varsContent=${varsContent}`)
     }
@@ -382,3 +401,23 @@ export const save = async (classResultList: StyleInfo[], config: WxRunningConfig
 
     return Promise.resolve(0)
 }
+
+export const batchPromise = <T>(handler: (task: T, config: WxRunningConfig) => Promise<string[]>,
+                                config: WxRunningConfig) => (tasks: T[]): Promise<string[]> => {
+    return promiseLimit(handler.name, tasks.length,
+        (taskIndex: number): Promise<string[]> => handler(tasks[taskIndex], config),
+        config.processOption.promiseLimit, config.debugOption.showTaskStep)
+        .then((classNames: string[][]) => classNames.flat().compact().unique())
+}
+
+export const generateContent = (config: WxRunningConfig) => async (missingClassNames: string[]) =>
+    style.generateStyleContents(missingClassNames, await getRuleSetting(config), await getThemeMap(config),
+        config.debugOption.showStyleTaskResult);
+
+export const saveContent = (config: WxRunningConfig) => (classResultList: StyleInfo[]): Promise<number> =>
+    save(classResultList, config);
+
+export const finishAndPrintCostTime = (time: Timing) => (result: number) => {
+    log(`[data] job done, cost ${time.es()} ms, result = ${result}`)
+    return Promise.resolve(0)
+};
