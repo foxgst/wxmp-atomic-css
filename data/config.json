@@ -1,0 +1,63 @@
+{
+  "fileStructure": {
+    "miniProgramDir": "miniprogram",
+    "componentDir": "components",
+    "appConfigFile": "app.json",
+    "cssMainFile": "app.wxss",
+    "cssVarFile": "var.wxss",
+    "cssOutputFile": "mini.wxss",
+    "cssInputFiles": [
+      "font.wxss"
+    ]
+  },
+  "workDir": "",
+  "watchOption": {
+    "delay": 200,
+    "fileTypes": [
+      ".wxml"
+    ],
+    "refreshCount": 0
+  },
+  "fileExtension": {
+    "page": ".wxml",
+    "ts": ".ts",
+    "js": ".js",
+    "css": ".wxss"
+  },
+  "cssOption": {
+    "rootElementName": "page",
+    "componentGlobalCss": "addGlobalClass:\\s*true",
+    "one": {
+      "from": 1,
+      "to": 7.5,
+      "precision": 3,
+      "unit": "vmin"
+    },
+    "singleColorThemes": [
+      "primary",
+      "white",
+      "black"
+    ]
+  },
+  "dataOption": {
+    "themeFile": "data/themes.json",
+    "ruleFile": "data/rules.json"
+  },
+  "debugOption": {
+    "printConfigInfo": false,
+    "printRule": false,
+    "printThemes": false,
+    "showPageClassNames": false,
+    "showPageClassAttribute": false,
+    "showCssStyleNames": false,
+    "showPageTaskBegin": false,
+    "showPageTaskResult": false,
+    "showStyleTaskResult": false,
+    "showTaskStep": false,
+    "showFileContent": false
+  },
+  "processOption": {
+    "promiseLimit": 5
+  },
+  "tempData": {}
+}
