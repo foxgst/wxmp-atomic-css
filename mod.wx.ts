@@ -14,17 +14,6 @@ export interface PageInfo {
     cssPath: boolean
 }
 
-
-interface AppSubpackage {
-    root: string,
-    pages: string[]
-}
-
-interface AppJson {
-    pages: string[],
-    subpackages?: AppSubpackage[]
-}
-
 /**
  * extract class names from class attribute value
  * e.g. get ['text-28', 'text-black'] from 'text-28 text-black'
@@ -165,6 +154,17 @@ export const parseComponentPages = async (config: WxRunningConfig): Promise<Page
 }
 
 export const parseMiniProgramPages = async (config: WxRunningConfig): Promise<string[]> => {
+
+    interface AppSubpackage {
+        root: string,
+        pages: string[]
+    }
+
+    interface AppJson {
+        pages: string[],
+        subpackages?: AppSubpackage[]
+    }
+
     const pages = await Deno.readTextFile(`${config.workDir}/${config.fileStructure.appConfigFile}`)
         .then((data: string) => {
             const app = JSON.parse(data) as AppJson
@@ -228,13 +228,10 @@ export const parsePageClassNames = (pagePath: string, config: WxRunningConfig): 
 export const readRunningConfig = async (configFilePath: string, customConfig?: OptionalRunningConfig): Promise<WxRunningConfig> => {
     const runningConfig = await readConfig(configFilePath)
     const config: WxRunningConfig = Object.assign({}, runningConfig, customConfig || {})
-
-
     return Promise.resolve(config)
 }
 
 export const printRunningConfig = async (config: WxRunningConfig): Promise<WxRunningConfig> => {
-
     if (config.debugOption.printConfigInfo) {
         log("[data] config: ", config)
     }
@@ -246,13 +243,11 @@ export const printRunningConfig = async (config: WxRunningConfig): Promise<WxRun
     if (config.debugOption.printRule) {
         log("[data] rules: ", rulesToString(ruleSetting.rules))
     }
-
     return config
 }
 
 
 export const ensureWorkDir = async (config: WxRunningConfig): Promise<WxRunningConfig> => {
-
     const workDir = Deno.args.length > 0 ? Deno.args[0] : "."
     for await (const dirEntry of Deno.readDir(workDir)) {
         if (dirEntry.name == config.fileStructure.miniProgramDir) {
@@ -273,7 +268,6 @@ export const ensureWorkDir = async (config: WxRunningConfig): Promise<WxRunningC
 
 
 export const watchMiniProgramPageChange = async (config: WxRunningConfig, refreshEvent: (config: WxRunningConfig) => Promise<number>) => {
-
     const watcher = Deno.watchFs(config.workDir);
     let refreshCount = 0
     let refreshWorking = false
