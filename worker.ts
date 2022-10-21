@@ -3,15 +3,14 @@ import "https://deno.land/std/fs/mod.ts";
 import {error, log, timing} from "./util.ts"
 import {OptionalRunningConfig, WxRunningConfig} from "./data.config.ts";
 import * as wx from "./mod.wx.ts";
-import {batchPromise} from "./mod.wx.ts";
 
 const mainProcess = (config: WxRunningConfig): Promise<number> => {
     const time = timing()
     return Promise.all([
         wx.parseGlobalStyleNames(config),
         wx.parseCssOutputFileStyleNames(config),
-        wx.parseMiniProgramPages(config).then(batchPromise(wx.parsePageClassNames, config)),
-        wx.parseComponentPages(config).then(batchPromise(wx.parseComponentClassNames, config)),
+        wx.parseMiniProgramPages(config).then(wx.batchPromise(wx.parsePageClassNames, config)),
+        wx.parseComponentPages(config).then(wx.batchPromise(wx.parseComponentClassNames, config)),
     ]).then(wx.mergeTargetClassNames)
         .then(wx.generateContent(config))
         .then(wx.saveContent(config))
