@@ -225,18 +225,6 @@ export const parsePageClassNames = (pagePath: string, config: WxRunningConfig): 
     return Promise.resolve(missingStyleNames)
 }
 
-export const parseCssOutputFileStyleNames = (config: WxRunningConfig): Promise<string[]> => {
-    if (config.watchOption.refreshCount++ == 0) {
-        return Promise.resolve([])
-    }
-    return Promise.resolve([])
-    // const cssOutputFileName = `${config.workDir}/${config.cssOutputFile}`
-    // let styleNames: string[] = (readClassNamesFromCssFile(cssOutputFileName) || []).compact().unique()
-    // log(`[task] parse style names from [${cssOutputFileName}]`)
-    // return styleNames
-}
-
-
 export const readRunningConfig = async (configFilePath: string, customConfig?: OptionalRunningConfig): Promise<WxRunningConfig> => {
     const runningConfig = await readConfig(configFilePath)
     const config: WxRunningConfig = Object.assign({}, runningConfig, customConfig || {})
@@ -338,19 +326,17 @@ export const getThemeMap = async (config: WxRunningConfig): Promise<ThemeMap> =>
 
 export const mergeTargetClassNames = (values: Awaited<string[]>[]): Promise<string[]> => {
     const globalStyleNames = values[0] as string[]
-    const generatedStyleNames = values[1] as string[]
-    const pageClassNames = values[2] as string[]
-    const componentPageClassNames = values[3] as string[]
+    const pageClassNames = values[1] as string[]
+    const componentPageClassNames = values[2] as string[]
 
     log(`[data] total found [${globalStyleNames.length}] global style names`)
-    log(`[data] total found [${generatedStyleNames.length}] generated style names`)
     log(`[data] total found [${pageClassNames.length}] class names from pages`)
     log(`[data] total found [${componentPageClassNames.length}] class names from components`)
 
     const missingClassNames: string[] = [].merge(pageClassNames).merge(componentPageClassNames)
-        .diff(globalStyleNames).diff(generatedStyleNames).compact().unique().sort()
+        .diff(globalStyleNames).compact().unique().sort()
 
-    const toRemoveClassNames: string[] = [].merge(globalStyleNames).merge(generatedStyleNames)
+    const toRemoveClassNames: string[] = [].merge(globalStyleNames)
         .diff(pageClassNames).diff(componentPageClassNames).compact().unique().sort()
 
     if (toRemoveClassNames.length > 0) {
@@ -367,7 +353,20 @@ export const mergeTargetClassNames = (values: Awaited<string[]>[]): Promise<stri
 }
 
 
-export const save = async (classResultList: StyleInfo[], config: WxRunningConfig): Promise<number> => {
+
+export const batchPromise = <T>(handler: (task: T, config: WxRunningConfig) => Promise<string[]>,
+                                config: WxRunningConfig) => (tasks: T[]): Promise<string[]> => {
+    return promiseLimit(handler.name, tasks.length,
+        (taskIndex: number): Promise<string[]> => handler(tasks[taskIndex], config),
+        config.processOption.promiseLimit, config.debugOption.showTaskStep)
+        .then((classNames: string[][]) => classNames.flat().compact().unique())
+}
+
+export const generateContent = (config: WxRunningConfig) => async (missingClassNames: string[]) =>
+    style.generateStyleContents(missingClassNames, await getRuleSetting(config), await getThemeMap(config),
+        config.debugOption.showStyleTaskResult);
+
+export const saveContent = (config: WxRunningConfig) => async (classResultList: StyleInfo[]): Promise<number> => {
     const styles = classResultList.map((m: StyleInfo) => m.styles).flat()
 
     const warnings = classResultList.map((m: StyleInfo) => m.warnings).flat().compact().unique().sort()
@@ -401,21 +400,6 @@ export const save = async (classResultList: StyleInfo[], config: WxRunningConfig
 
     return Promise.resolve(0)
 }
-
-export const batchPromise = <T>(handler: (task: T, config: WxRunningConfig) => Promise<string[]>,
-                                config: WxRunningConfig) => (tasks: T[]): Promise<string[]> => {
-    return promiseLimit(handler.name, tasks.length,
-        (taskIndex: number): Promise<string[]> => handler(tasks[taskIndex], config),
-        config.processOption.promiseLimit, config.debugOption.showTaskStep)
-        .then((classNames: string[][]) => classNames.flat().compact().unique())
-}
-
-export const generateContent = (config: WxRunningConfig) => async (missingClassNames: string[]) =>
-    style.generateStyleContents(missingClassNames, await getRuleSetting(config), await getThemeMap(config),
-        config.debugOption.showStyleTaskResult);
-
-export const saveContent = (config: WxRunningConfig) => (classResultList: StyleInfo[]): Promise<number> =>
-    save(classResultList, config);
 
 export const finishAndPrintCostTime = (time: Timing) => (result: number) => {
     log(`[data] job done, cost ${time.es()} ms, result = ${result}`)
