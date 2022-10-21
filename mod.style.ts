@@ -1,100 +1,7 @@
-import {Themes} from "./data.theme.ts";
-import {log} from "./util.common.ts";
-
-
-/**
- * value representation, value equals to from / to,
- * e.g 0.5 = 1/2
- */
-export interface UnitValueDeclaration {
-    /**
-     *  dividend
-     */
-    from: number
-    /**
-     * divisor
-     */
-    to: number
-    /**
-     * precision, number of chars after decimal point
-     */
-    precision: number
-    /**
-     * unit with number, e.g. vmin, rpx, em
-     */
-    unit: string
-}
-
-
-/**
- * atomic style rule
- */
-export interface AtomicStyleRule {
-    /**
-     * package name to manage rules
-     */
-    package: string
-    /**
-     * describe the rule, if syntax is not normal
-     */
-    desc?: string
-    /**
-     * class name syntax, could use vars, [U]-unit, [C]-color, [N]-number,
-     * [A]-alpha number, with decimal point as prefix is the true value
-     */
-    syntax: string
-    /**
-     * classes name which in global css file and compose to the new style
-     */
-    compose?: string[]
-    /**
-     * style declaration for class names, required if compose is undefined or empty
-     */
-    expr?: string,
-    /**
-     * dependencies of style names
-     */
-    dependencies?: string[],
-    /**
-     * units includes by expr, effected on running
-     */
-    units?: string[],
-    /**
-     * colors includes by expr, effected on running
-     */
-    colors?: string[],
-    /**
-     * regExtp for dynamic expr, which includes [, effected on running
-     */
-    syntaxRegex?: RegExp
-}
-
-/**
- * Style information for one class name
- */
-export interface StyleInfo {
-    /**
-     * ref units, used to generate css vars
-     */
-    units: string[],
-    /**
-     * ref colors, used to generate css vars
-     */
-    colors: string[],
-    /**
-     * final declaration of the style, merged in to the global style file
-     */
-    styles: string[],
-    /**
-     * warnings occurs on generating style info
-     */
-    warnings: string[],
-    /**
-     * dependencies of class names, which name and declaration should merge to the global style file
-     * e.g. keyframes
-     */
-    classNames: string[]
-}
+import {log} from "./util.ts";
+import {AtomicStyleRule, StyleRuleSetting} from "./data.rule.ts";
+import {StyleInfo, UnitValueDeclaration} from "./data.config.ts";
+import {ThemeMap} from "./data.theme.ts";
 
 /**
  * parameters used a property value
@@ -129,13 +36,7 @@ export interface PropertyValueParameter {
     alpha?: string
 }
 
-export interface StyleRuleSetting {
-    ruleMap: { [index: string]: AtomicStyleRule, }
-    rules: AtomicStyleRule[]
-    themes: string[]
-}
-
-const extraPara = (expression: string, rule: AtomicStyleRule | undefined): PropertyValueParameter | undefined => {
+const extraPara = (expression: string, rule: AtomicStyleRule | undefined, themeMap: ThemeMap): PropertyValueParameter | undefined => {
     if (rule == undefined || rule.syntaxRegex == undefined) {
         return undefined
     }
@@ -162,7 +63,7 @@ const extraPara = (expression: string, rule: AtomicStyleRule | undefined): Prope
         if (para.color) {
             if (para.number == undefined) {
                 para.number = "1"
-            } else if (Themes[para.color].length == 1) {
+            } else if (themeMap[para.color].length == 1) {
                 para.alpha = para.number
                 para.number = "1"
             }
@@ -192,7 +93,7 @@ const searchRulesByExpr = (expression: string, ruleSetting: StyleRuleSetting): A
 }
 
 
-export const makeCssForExpr = (expression: string, ruleSetting: StyleRuleSetting): StyleInfo => {
+export const makeCssForExpr = (expression: string, ruleSetting: StyleRuleSetting, themeMap: ThemeMap): StyleInfo => {
     const rules = searchRulesByExpr(expression, ruleSetting)
     if (rules == undefined || rules.length == 0) {
         return {units: [], colors: [], styles: [], warnings: [expression], classNames: []}
@@ -213,7 +114,7 @@ export const makeCssForExpr = (expression: string, ruleSetting: StyleRuleSetting
             break
         }
 
-        const para: PropertyValueParameter | undefined = extraPara(classRule.classExpr, classRule.rule)
+        const para: PropertyValueParameter | undefined = extraPara(classRule.classExpr, classRule.rule, themeMap)
         if (para != undefined) {
             if (para.unit) {
                 units.push(para.unit)
@@ -261,75 +162,30 @@ const wrapPara = (expression: string, para?: PropertyValueParameter | undefined)
         return expression || ""
     }
     if (para.unit != undefined) {
-        expression = expression.replace(/\[U\]/g, para.unit)
+        expression = expression.replace(/\[U]/g, para.unit)
     }
     if (para.number != undefined) {
-        expression = expression.replace(/\[N\]/g, para.number)
+        expression = expression.replace(/\[N]/g, para.number)
     }
     if (para.color != undefined) {
-        expression = expression.replace(/\[C\]/g, para.color)
+        expression = expression.replace(/\[C]/g, para.color)
     }
     if (para.alpha != undefined) {
-        expression = expression.replace(/\[A\]/g, para.alpha)
+        expression = expression.replace(/\[A]/g, para.alpha)
     }
     return expression
 }
 
-/**
- * 将样式规则数组转换为字典，便于快速读取
- * @param rules 样式规则数组
- * @param themes 主题名称
- */
-export const initRuleSetting = (rules: AtomicStyleRule[], themes: string[]): StyleRuleSetting => {
-    const ruleMap: { [index: string]: AtomicStyleRule } = {}
-    rules.forEach((rule: AtomicStyleRule) => {
-
-        // auto extract dependent units and colors
-        if (rule.expr) {
-            if (rule.expr.includes("--unit")) {
-                const units = rule.expr.match(/--unit-([0-9|d|p]+)/g)
-                if (units) {
-                    rule.units = units.map((m: string) => m.replace("--unit-", ""))
-                }
-            }
-            if (rule.expr.includes("--color")) {
-                const units = rule.expr.match(/--color-([a-z]+)(-[0-9]+(-a[0-9]+)?)?/g)
-                if (units) {
-                    rule.colors = units.map((m: string) => m.replace("--color-", ""))
-                }
-            }
-            // if(rule.units && rule.units.length) {
-            //     console.log("=====", rule.syntax, rule.units, rule.colors)
-            // }
-        }
-
-        if (rule.syntax.includes("[")) {
-            // 生成动态规则名称
-            const ruleMapName = rule.syntax.replace(/[C|U|N|A]/g, "")
-            // 生成正则表达式
-            const regexExpr = rule.syntax
-                .replace("[U]", "(?<U>[0-9|d|p]+)")
-                .replace("[C]", "(?<C>[a-z]+)")
-                .replace("[N]", "(?<N>[0-9]+)")
-                .replace("[A]", "(?<A>[0-9]+)")
-            // 设置规则名称
-            rule.syntaxRegex = new RegExp("^" + regexExpr + "$")
-            ruleMap[ruleMapName] = rule
-        } else {
-            ruleMap[rule.syntax] = rule
-        }
-    })
-    return {ruleMap, themes, rules}
-}
 
 /**
- * 生成变量的CSS
- * @param units 全部数值
- * @param colors
- * @param rootElementName
- * @param one
+ * generate unit and color variables
+ * @param units all units
+ * @param colors all colors
+ * @param rootElementName root element name
+ * @param one unit one value
+ * @param themeMap the theme map
  */
-export const generateVars = (units: string[], colors: string[], rootElementName: string, one: UnitValueDeclaration): string => {
+export const generateVars = (units: string[], colors: string[], rootElementName: string, one: UnitValueDeclaration, themeMap: ThemeMap): string => {
 
     const clearFunctions = [
         {rule: /d/g, value: "0."},
@@ -352,7 +208,7 @@ export const generateVars = (units: string[], colors: string[], rootElementName:
         }
 
         const {theme, order, alpha} = colorInfo
-        vars.push(`--color-${color}: ${generateColorVar(theme, order, alpha)};`)
+        vars.push(`--color-${color}: ${generateColorVar(theme, order, alpha, themeMap)};`)
     })
 
 
@@ -395,19 +251,20 @@ const calcUnitValue = (unit: string, one: UnitValueDeclaration): string => {
 }
 
 /**
- * 生成主题色彩变量
- * @param themeName 主题名称
- * @param colorOrder
- * @param alpha
+ * generate color variables
+ * @param themeName theme name
+ * @param colorOrder color order
+ * @param alpha alpha value
+ * @param themeMap the theme map
  */
-const generateColorVar = (themeName: string, colorOrder: string, alpha: string): string => {
+const generateColorVar = (themeName: string, colorOrder: string, alpha: string, themeMap: ThemeMap): string => {
     if (themeName == "") {
         throw Error("missing theme name")
     }
-    if (!Themes[themeName]) {
+    if (!themeMap[themeName]) {
         throw Error(`missing theme ${themeName}`)
     }
-    const colors = Themes[themeName] as string[]
+    const colors = themeMap[themeName]
     if (colors.length == 0) {
         throw Error(`theme ${themeName} is empty`)
     }
@@ -427,10 +284,16 @@ const generateColorVar = (themeName: string, colorOrder: string, alpha: string):
     throw Error(`invalid color value ${themeName}-${colorOrder}-${alpha}`)
 }
 
-
-export const generateStyleContents = (missingClassNames: string[], ruleSetting: StyleRuleSetting, showStyleTaskResult: boolean): StyleInfo[] => {
+/**
+ * generate style contents for class names
+ * @param missingClassNames class names
+ * @param ruleSetting rules
+ * @param themeMap themes
+ * @param showStyleTaskResult flag if show style task result
+ */
+export const generateStyleContents = (missingClassNames: string[], ruleSetting: StyleRuleSetting, themeMap: ThemeMap, showStyleTaskResult: boolean): StyleInfo[] => {
     return missingClassNames.map((classExpr: string): StyleInfo => {
-        const {units, colors, styles, warnings, classNames} = makeCssForExpr(classExpr, ruleSetting)
+        const {units, colors, styles, warnings, classNames} = makeCssForExpr(classExpr, ruleSetting, themeMap)
 
         if (showStyleTaskResult) {
             const order = "".padStart(12, " ")

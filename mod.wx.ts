@@ -1,117 +1,28 @@
 import {htmltok, TokenType} from "https://deno.land/x/htmltok@v0.0.3/private/htmltok.ts";
-import {log, sleep} from "./util.common.ts";
 import * as css from "https://deno.land/x/css@0.3.0/mod.ts";
 import {Rule} from "https://deno.land/x/css@0.3.0/mod.ts";
-import {Rules} from "./data.rule.ts";
-import {Themes} from "./data.theme.ts";
-import {UnitValueDeclaration, StyleRuleSetting, initRuleSetting, StyleInfo, generateVars} from "./util.style.ts";
+import {log, sleep} from "./util.ts";
+import {readAndInitRuleSetting, StyleRuleSetting} from "./data.rule.ts";
+import {readThemes, ThemeMap} from "./data.theme.ts";
+import {OptionalRunningConfig, readConfig, StyleInfo, WxRunningConfig} from "./data.config.ts";
+import {generateVars} from "./mod.style.ts";
 
 export interface PageInfo {
     page: string,
-    tsPath?: boolean,
-    jsPath?: boolean,
-    cssPath?: boolean
+    tsPath: boolean,
+    jsPath: boolean,
+    cssPath: boolean
 }
 
-export interface WxRunningConfig {
 
-    workDir: string
-
-    miniProgramDir: string
-    componentDir: string
-    appConfigFile: string
-    cssMainFile: string
-    cssVarFile: string
-    cssOutputFile: string
-    cssInputFiles: string[]
-
-    fileExtension: {
-        page: string
-        ts: string
-        js: string
-        css: string
-    }
-
-    cssOption: {
-        rootElementName: string
-        componentGlobalCss: RegExp
-        one: UnitValueDeclaration
-    }
-
-    watchOptions: {
-        delay: number,
-        fileTypes: string[],
-        refreshCount: number
-    }
-
-    debugOptions: {
-        printRule: boolean
-        printConfigInfo: boolean
-        showPageClassNames: boolean
-        showPageClassAttribute: boolean
-        showCssStyleNames: boolean
-        showPageTaskBegin: boolean
-        showPageTaskResult: boolean
-        showStyleTaskResult: boolean
-        showTaskStep: boolean
-        showFileContent: boolean
-    }
-
-    processOption: {
-        promiseLimit: number
-    }
-
-    tempData: { [index: string]: unknown }
-
+interface AppSubpackage {
+    root: string,
+    pages: string[]
 }
 
-export const DefaultConfig: WxRunningConfig = {
-    miniProgramDir: "miniprogram",
-    componentDir: "components",
-    appConfigFile: "app.json",
-    cssMainFile: "app.wxss",
-    cssVarFile: "var.wxss",
-    cssOutputFile: "mini.wxss",
-    cssInputFiles: ["font.wxss"],
-    workDir: "",
-    watchOptions: {
-        delay: 200,
-        fileTypes: [".wxml"],
-        refreshCount: 0
-    },
-
-    fileExtension: {
-        page: ".wxml",
-        ts: ".ts",
-        js: ".js",
-        css: ".wxss"
-    },
-
-
-    cssOption: {
-        rootElementName: "page",
-        componentGlobalCss: /addGlobalClass:\s*true/,
-        one: {from: 1, to: 7.5, precision: 3, unit: "vmin"},
-    },
-
-    debugOptions: {
-        printRule: true,
-        printConfigInfo: true,
-        showPageClassNames: false,
-        showPageClassAttribute: false,
-        showCssStyleNames: false,
-        showPageTaskBegin: false,
-        showPageTaskResult: false,
-        showStyleTaskResult: false,
-        showTaskStep: false,
-        showFileContent: false
-    },
-
-    processOption: {
-        promiseLimit: 5
-    },
-
-    tempData: {}
+interface AppJson {
+    pages: string[],
+    subpackages?: AppSubpackage[]
 }
 
 /**
@@ -126,7 +37,7 @@ const extractClassNames = (classAttributeValue: string): string[] => {
     }
 
     // clean logic expression chars
-    classAttributeValue = classAttributeValue.replace(/[a-zA-Z\d\.\s=&\[\]<>!%]+\?/g, "")
+    classAttributeValue = classAttributeValue.replace(/[a-zA-Z\d\\.\s=&\[\]<>!%]+\?/g, "")
 
     // if value is only class names, just split it
     if (classAttributeValue.match(/^[\s\da-z-\\.]+$/)) {
@@ -152,7 +63,7 @@ const parseClassItemFromPage = (page: string, config: WxRunningConfig): string[]
         if (isValidAttr && token.type == TokenType.ATTR_VALUE) {
             const items = extractClassNames(token.getValue())
 
-            if (config.debugOptions.showPageClassAttribute) {
+            if (config.debugOption.showPageClassAttribute) {
                 log(`[check]${"".padEnd(9, " ")}parse class attribute [${token.getValue()}] to [${items.join(",")}]`)
             }
             classNames.push(...items)
@@ -180,7 +91,7 @@ const readClassNamesFromCssFile = (cssFilePath: string): string[] | undefined =>
 
 export const parseComponentClassNames = (pageInfo: PageInfo, config: WxRunningConfig): Promise<string[]> => {
 
-    if (config.debugOptions.showPageTaskBegin) {
+    if (config.debugOption.showPageTaskBegin) {
         log(`[task] process component page ${pageInfo.page}`)
     }
     let jsFileName = ""
@@ -195,15 +106,15 @@ export const parseComponentClassNames = (pageInfo: PageInfo, config: WxRunningCo
 
     const pageContent: string = Deno.readTextFileSync(jsFileName)
 
-    if (!config.cssOption.componentGlobalCss.test(pageContent)) {
-        if (config.debugOptions.showPageTaskResult) {
+    if (!new RegExp(config.cssOption.componentGlobalCss).test(pageContent)) {
+        if (config.debugOption.showPageTaskResult) {
             log(`[data] ignore ${pageInfo.page} without global class option`)
         }
         return Promise.resolve([])
     }
 
     const classNames: string[] = parseClassItemFromPage(pageInfo.page, config)
-    if (config.debugOptions.showPageClassNames) {
+    if (config.debugOption.showPageClassNames) {
         log(`[data] found ${classNames.length} class names in ${pageInfo.page}`)
     }
 
@@ -212,13 +123,13 @@ export const parseComponentClassNames = (pageInfo: PageInfo, config: WxRunningCo
         const cssPage = pageInfo.page.replace(config.fileExtension.page, config.fileExtension.css)
 
         styleNames = readClassNamesFromCssFile(cssPage) || []
-        if (config.debugOptions.showCssStyleNames) {
+        if (config.debugOption.showCssStyleNames) {
             log(`[data] found ${styleNames.length} styles names in ${pageInfo.page}`)
         }
     }
 
     const toCreateClassNames = classNames.diff(styleNames)
-    if (config.debugOptions.showPageTaskResult) {
+    if (config.debugOption.showPageTaskResult) {
         log(`[data] add create styles task, [${toCreateClassNames.length}] class names, [${toCreateClassNames.join(",")}] from ${pageInfo.page}`)
     }
     return Promise.resolve(toCreateClassNames)
@@ -226,7 +137,7 @@ export const parseComponentClassNames = (pageInfo: PageInfo, config: WxRunningCo
 
 export const parseComponentPages = async (config: WxRunningConfig): Promise<PageInfo[]> => {
     // read all components files
-    const componentsStack: string[] = [`${config.workDir}/${config.componentDir}`]
+    const componentsStack: string[] = [`${config.workDir}/${config.fileStructure.componentDir}`]
     const componentsPages: string[] = []
 
     while (componentsStack.length > 0) {
@@ -244,29 +155,28 @@ export const parseComponentPages = async (config: WxRunningConfig): Promise<Page
     }
 
     const pageInfos = componentsPages.filter((page: string) => page.endsWith(config.fileExtension.page))
-        .map((page: string): PageInfo => {
-            return {
-                page,
-                jsPath: componentsPages.indexOf(page.replace(config.fileExtension.page, config.fileExtension.js)) > -1,
-                tsPath: componentsPages.indexOf(page.replace(config.fileExtension.page, config.fileExtension.ts)) > -1,
-                cssPath: componentsPages.indexOf(page.replace(config.fileExtension.page, config.fileExtension.css)) > -1,
-            }
-        })
+        .map((page: string): PageInfo => ({
+            page,
+            jsPath: componentsPages.indexOf(page.replace(config.fileExtension.page, config.fileExtension.js)) > -1,
+            tsPath: componentsPages.indexOf(page.replace(config.fileExtension.page, config.fileExtension.ts)) > -1,
+            cssPath: componentsPages.indexOf(page.replace(config.fileExtension.page, config.fileExtension.css)) > -1,
+        }))
     return Promise.resolve(pageInfos)
 }
 
 export const parseMiniProgramPages = async (config: WxRunningConfig): Promise<string[]> => {
-    const pages = await Deno.readTextFile(`${config.workDir}/${config.appConfigFile}`)
+    const pages = await Deno.readTextFile(`${config.workDir}/${config.fileStructure.appConfigFile}`)
         .then((data: string) => {
-            const app = JSON.parse(data)
-            return [...app.pages, ...(app.subpackages || []).map((pkg: any) => pkg.pages.map((page: string) => `${pkg.root}/${page}`)).flat()]
+            const app = JSON.parse(data) as AppJson
+            return [...app.pages, ...(app.subpackages || [])
+                .map((pkg: AppSubpackage) => pkg.pages.map((page: string) => `${pkg.root}/${page}`)).flat()]
         })
     log(`[task] read wechat mini program pages from config file, found [${pages.length}] pages`)
     return pages.map((page: string) => `${config.workDir}/${page}.wxml`)
 }
 
 export const parseGlobalStyleNames = async (config: WxRunningConfig): Promise<string[]> => {
-    return await [...config.cssInputFiles, config.cssMainFile].map((filename: string) => {
+    return await [...config.fileStructure.cssInputFiles, config.fileStructure.cssMainFile].map((filename: string) => {
         const result = readClassNamesFromCssFile(`${config.workDir}/${filename}`)
         if (result == undefined) {
             log(`[task] missing global css file [${filename}] and ignore`)
@@ -281,34 +191,34 @@ export const parsePageClassNames = (config: WxRunningConfig, pagePath: string): 
 
     const pageEmpty = "".padEnd(9, " ")
 
-    if (config.debugOptions.showPageTaskBegin) {
+    if (config.debugOption.showPageTaskBegin) {
         log(`[check] process page [${pagePath}]`)
     }
 
     const classNames: string[] = parseClassItemFromPage(pagePath, config)
-    if (config.debugOptions.showPageClassNames) {
+    if (config.debugOption.showPageClassNames) {
         log(`[check]${pageEmpty}found page class names [${classNames.length}] [${classNames.join(",")}]`)
     }
 
     const cssFilePath = pagePath.replace(".wxml", ".wxss")
     const styleNames = readClassNamesFromCssFile(cssFilePath)
     if (styleNames == undefined) {
-        if (config.debugOptions.showPageTaskResult) {
+        if (config.debugOption.showPageTaskResult) {
             log(`[check]${pageEmpty}missing page class file [${cssFilePath}] and ignore`)
         }
     } else {
-        if (config.debugOptions.showPageTaskResult) {
+        if (config.debugOption.showPageTaskResult) {
             log(`[check]${pageEmpty}found page style names [${styleNames.length}] [${styleNames.join(",")}]`)
         }
     }
 
     const missingStyleNames = classNames.diff(styleNames)
     if (missingStyleNames.length == 0) {
-        if (config.debugOptions.showPageTaskResult) {
+        if (config.debugOption.showPageTaskResult) {
             log(`[check]${pageEmpty}no styles to create`)
         }
     } else {
-        if (config.debugOptions.showPageTaskResult) {
+        if (config.debugOption.showPageTaskResult) {
             log(`[check]${pageEmpty}need to create [${missingStyleNames.length}] styles [${missingStyleNames.join(",")}]`)
         }
     }
@@ -316,9 +226,10 @@ export const parsePageClassNames = (config: WxRunningConfig, pagePath: string): 
 }
 
 export const parseCssOutputFileStyleNames = (config: WxRunningConfig): Promise<string[]> => {
-    //if (config.watchOptions.refreshCount++ == 0) {
+    if (config.watchOption.refreshCount++ == 0) {
+        return Promise.resolve([])
+    }
     return Promise.resolve([])
-    //}
     // const cssOutputFileName = `${config.workDir}/${config.cssOutputFile}`
     // let styleNames: string[] = (readClassNamesFromCssFile(cssOutputFileName) || []).compact().unique()
     // log(`[task] parse style names from [${cssOutputFileName}]`)
@@ -326,8 +237,9 @@ export const parseCssOutputFileStyleNames = (config: WxRunningConfig): Promise<s
 }
 
 
-export const setMiniProgramOptions = (customConfig?: WxRunningConfig): Promise<WxRunningConfig> => {
-    const config: WxRunningConfig = Object.assign({}, DefaultConfig, customConfig || {})
+export const readRunningConfig = async (configFilePath: string, customConfig?: OptionalRunningConfig): Promise<WxRunningConfig> => {
+    const runningConfig = await readConfig(configFilePath)
+    const config: WxRunningConfig = Object.assign({}, runningConfig, customConfig || {})
     return Promise.resolve(config)
 }
 
@@ -336,19 +248,19 @@ export const ensureWorkDir = async (config: WxRunningConfig): Promise<WxRunningC
 
     const workDir = Deno.args.length > 0 ? Deno.args[0] : "."
     for await (const dirEntry of Deno.readDir(workDir)) {
-        if (dirEntry.name == config.miniProgramDir) {
-            log(`[task] working directory found for ${config.miniProgramDir} at ${workDir}`)
-            config.workDir = `${workDir}/${config.miniProgramDir}`
+        if (dirEntry.name == config.fileStructure.miniProgramDir) {
+            log(`[task] working directory found for ${config.fileStructure.miniProgramDir} at ${workDir}`)
+            config.workDir = `${workDir}/${config.fileStructure.miniProgramDir}`
             return Promise.resolve(config)
         }
-        if (dirEntry.name == config.cssMainFile) {
-            log(`[task] working directory found for ${config.cssMainFile} at ${workDir}`)
+        if (dirEntry.name == config.fileStructure.cssMainFile) {
+            log(`[task] working directory found for ${config.fileStructure.cssMainFile} at ${workDir}`)
             config.workDir = workDir
             return Promise.resolve(config)
         }
     }
 
-    log(`[task] invalid working directory, can not found ${config.cssMainFile} or ${config.miniProgramDir} directory`)
+    log(`[task] invalid working directory, can not found ${config.fileStructure.cssMainFile} or ${config.fileStructure.miniProgramDir} directory`)
     return Promise.reject("should set working directory to wechat mini program dir")
 }
 
@@ -367,14 +279,14 @@ export const watchMiniProgramPageChange = async (config: WxRunningConfig, refres
         }
 
         const needRefresh: boolean = event.paths.map((path: string) => path.slice(path.lastIndexOf(".")))
-            .filter((fileExtension: string) => config.watchOptions.fileTypes.indexOf(fileExtension) > -1)
+            .filter((fileExtension: string) => config.watchOption.fileTypes.indexOf(fileExtension) > -1)
             .length > 0
         if (needRefresh && !refreshWorking) {
             refreshWorking = true
 
             log(`[file changed] ${event.paths.join(";")}`)
 
-            sleep(config.watchOptions.delay)
+            sleep(config.watchOption.delay)
                 .then(() => refreshEvent(config))
                 .then(() => {
                     refreshWorking = false
@@ -384,14 +296,25 @@ export const watchMiniProgramPageChange = async (config: WxRunningConfig, refres
     }
 }
 
-export const getRuleSetting = (config: WxRunningConfig): StyleRuleSetting => {
+export const getRuleSetting = async (config: WxRunningConfig): Promise<StyleRuleSetting> => {
     if (config.tempData["ruleSetting"]) {
         return config.tempData["ruleSetting"] as StyleRuleSetting
     }
-    const ruleSetting = initRuleSetting(Rules, Object.keys(Themes));
+    const ruleSetting = await readAndInitRuleSetting(config.dataOption.ruleFile);
     config.tempData["ruleSetting"] = ruleSetting
     log(`[task] read ${ruleSetting.rules.length} rules`)
     return ruleSetting;
+}
+
+
+export const getThemeMap = async (config: WxRunningConfig): Promise<ThemeMap> => {
+    if (config.tempData["themeMap"]) {
+        return config.tempData["themeMap"] as ThemeMap
+    }
+    const themeMap = await readThemes(config.dataOption.themeFile)
+    config.tempData["themeMap"] = themeMap
+    log(`[task] read ${Object.keys(themeMap).length} themes`)
+    return themeMap;
 }
 
 export const mergeTargetClassNames = (values: Awaited<string[]>[]): Promise<string[]> => {
@@ -425,7 +348,7 @@ export const mergeTargetClassNames = (values: Awaited<string[]>[]): Promise<stri
 }
 
 
-export const save = (classResultList: StyleInfo[], config: WxRunningConfig): Promise<number> => {
+export const save = async (classResultList: StyleInfo[], config: WxRunningConfig): Promise<number> => {
     const styles = classResultList.map((m: StyleInfo) => m.styles).flat()
 
     const warnings = classResultList.map((m: StyleInfo) => m.warnings).flat().compact().unique().sort()
@@ -442,19 +365,20 @@ export const save = (classResultList: StyleInfo[], config: WxRunningConfig): Pro
 
     log(`[task] begin to write output file`)
 
-    const varsContent = generateVars(units, colors, config.cssOption.rootElementName, config.cssOption.one)
-    if (config.debugOptions.showFileContent) {
+    const themeMap = await getThemeMap(config)
+    const varsContent = generateVars(units, colors, config.cssOption.rootElementName, config.cssOption.one, themeMap)
+    if (config.debugOption.showFileContent) {
         log(`[data] varsContent=${varsContent}`)
     }
-    Deno.writeTextFileSync(`${config.workDir}/${config.cssVarFile}`, varsContent)
-    log(`[task] save ${varsContent.length} chars to ${config.cssVarFile}`)
+    Deno.writeTextFileSync(`${config.workDir}/${config.fileStructure.cssVarFile}`, varsContent)
+    log(`[task] save ${varsContent.length} chars to ${config.fileStructure.cssVarFile}`)
 
     const styleContent = classResultList.map((m: StyleInfo) => m.styles).flat().join("\n")
-    if (config.debugOptions.showFileContent) {
+    if (config.debugOption.showFileContent) {
         log(`[data] styleContent=${styleContent}`)
     }
-    Deno.writeTextFileSync(`${config.workDir}/${config.cssOutputFile}`, styleContent)
-    log(`[task] save ${styleContent.length} chars to ${config.cssOutputFile}`)
+    Deno.writeTextFileSync(`${config.workDir}/${config.fileStructure.cssOutputFile}`, styleContent)
+    log(`[task] save ${styleContent.length} chars to ${config.fileStructure.cssOutputFile}`)
 
     return Promise.resolve(0)
 }

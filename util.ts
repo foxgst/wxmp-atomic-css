@@ -21,6 +21,29 @@ const nowString = (): string => {
         + "." + +now.getMilliseconds().toString().padStart(3, "0")
 }
 
+/**
+ * map with sorted keys
+ */
+export type KeySortedArrayMap<Type> = {
+    keys: string[];
+    map: { [key: string]: Type[] };
+};
+
+/**
+ * group array by keys, return key sorted map
+ * @param elementArray element array
+ * @param keyFunction key generator function
+ */
+export const arrayMap = <Type>(elementArray: Type[], keyFunction: (a: Type) => string): KeySortedArrayMap<Type> =>
+    elementArray.reduce((groupMap: KeySortedArrayMap<Type>, element: Type) => {
+        const key = keyFunction(element)
+        if (groupMap.keys.indexOf(key) == -1) {
+            groupMap.keys.push(key)
+            groupMap.map[key] = []
+        }
+        groupMap.map[key].push(element)
+        return groupMap
+    }, {keys: [], map: {}});
 
 /**
  * sleep and execute task
@@ -45,7 +68,7 @@ export const timing = (): { at: number, es: () => number } => {
  * @param showTaskStep flag if showing task step, default value is false
  */
 export const promiseLimit = async <T>(taskName: string, taskCount: number, process: (taskIndex: number) => Promise<T>,
-                                      limit: number = 5, showTaskStep: boolean = false): Promise<T[]> => {
+                                      limit: number, showTaskStep: boolean): Promise<T[]> => {
     const taskResults: T[] = new Array<T>()
 
     // must log the beginning of task sequence
@@ -68,4 +91,20 @@ export const promiseLimit = async <T>(taskName: string, taskCount: number, proce
     log(`[task] [${taskName}] finish ${taskCount} tasks`)
 
     return Promise.resolve(taskResults)
+};
+
+
+export const readDataFile = <Type> (filePath: string): Promise<Type> => {
+    if(filePath.startsWith("http")) {
+        return fetch(filePath)
+            .then((response) => response.json())
+            .then((json) => json as Type);
+    }
+    return Deno.readTextFile(filePath)
+        .then((response)=> JSON.parse(response))
+        .then((json) => json as Type);
+}
+
+export type PropertyOptional<Type> = {
+    [Property in keyof Type]-?: Type[Property];
 };
