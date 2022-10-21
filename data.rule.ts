@@ -1,4 +1,7 @@
-export const Rules = [
+import {AtomicStyleRule} from "./util.style.ts"
+import {style} from "https://deno.land/x/wxmp_atomic_css@v0.0.1/worker.ts";
+
+export const Rules: AtomicStyleRule[] = [
     {
         package: "component.tip.core",
         syntax: "tip-warn",
@@ -742,3 +745,24 @@ export const Rules = [
         dependencies: ["@keyframes bounce"]
     },
 ]
+
+/**
+ * toString() of Rules
+ */
+export const rulesToString = (): string => {
+    type packageRuleType = { package: string, syntaxArray: string[] }
+    const rules: packageRuleType[] = []
+    let packageName = ""
+    Rules.forEach((rule: AtomicStyleRule) => {
+        if (rule.package != packageName) {
+            packageName = rule.package
+            rules.push({package: rule.package, syntaxArray: []})
+        }
+        rules[rules.length - 1].syntaxArray.push(rule.syntax)
+    })
+    return `total ${rules.length} package and ${Rules.length} rules\n`
+        + "------------------ rules begin ------------------\n"
+        + rules.map((rule: packageRuleType, index: number) => `${(index + 1).toString().padStart(2, " ")})`
+            + ` package = ${rule.package}, syntax = [${rule.syntaxArray.join(",")}]`).join("\n")
+        + "\n------------------ rules end ------------------"
+}

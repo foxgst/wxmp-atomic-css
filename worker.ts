@@ -1,8 +1,9 @@
 import "https://deno.land/x/arrays/mod.ts";
 import "https://deno.land/std/fs/mod.ts";
-import {log, promiseLimit, timing} from "./util.common.ts"
+import {log, error, promiseLimit, timing} from "./util.common.ts"
 import * as style from "./util.style.ts";
 import * as wx from "./util.wx.ts";
+import {rulesToString} from "./data.rule.ts";
 
 
 const mainProcess = (config: wx.WxRunningConfig): Promise<number> => {
@@ -12,19 +13,15 @@ const mainProcess = (config: wx.WxRunningConfig): Promise<number> => {
         wx.parseCssOutputFileStyleNames(config),
         wx.parseMiniProgramPages(config)
             .then((pages: string[]): Promise<string[]> =>
-                promiseLimit("parse-page-class-names", pages.length,
-                    config.processOption.promiseLimit, config.debugOptions.showTaskStep,
-                    (taskIndex: number): Promise<string[]> => {
-                        return wx.parsePageClassNames(config, pages[taskIndex])
-                    }).then((classNames: string[][]) => classNames.flat().compact().unique())
+                promiseLimit("parse-page-class-names", pages.length, (taskIndex: number): Promise<string[]> => {
+                    return wx.parsePageClassNames(config, pages[taskIndex])
+                }, config.processOption.promiseLimit, config.debugOptions.showTaskStep).then((classNames: string[][]) => classNames.flat().compact().unique())
             ),
         wx.parseComponentPages(config)
             .then((componentPages: wx.PageInfo[]): Promise<string[]> =>
-                promiseLimit("parse-component-class-names", componentPages.length,
-                    config.processOption.promiseLimit, config.debugOptions.showTaskStep,
-                    (taskIndex: number): Promise<string[]> => {
-                        return wx.parseComponentClassNames(componentPages[taskIndex], config)
-                    }).then((classNames: string[][]) => classNames.flat().compact().unique())
+                promiseLimit("parse-component-class-names", componentPages.length, (taskIndex: number): Promise<string[]> => {
+                    return wx.parseComponentClassNames(componentPages[taskIndex], config)
+                }, config.processOption.promiseLimit, config.debugOptions.showTaskStep).then((classNames: string[][]) => classNames.flat().compact().unique())
             ),
     ])
         .then((values: Awaited<string[]>[]) => wx.mergeTargetClassNames(values))
@@ -50,11 +47,15 @@ const mainProcess = (config: wx.WxRunningConfig): Promise<number> => {
     };
     Deno.addSignalListener("SIGINT", sigIntHandler);
 
+
     wx.setMiniProgramOptions()
         .then((config: wx.WxRunningConfig) => wx.ensureWorkDir(config))
         .then((config: wx.WxRunningConfig) => {
             if (config.debugOptions.printConfigInfo) {
                 log("[data] config: ", config)
+            }
+            if(config.debugOptions.printRule) {
+                log("[data] rules: ",rulesToString())
             }
 
             log("[task] start auto generation after started");
@@ -63,7 +64,7 @@ const mainProcess = (config: wx.WxRunningConfig): Promise<number> => {
                 .then(() => log("service ready, Press Ctrl-C to exit"))
                 .then(() => wx.watchMiniProgramPageChange(config, mainProcess))
 
-        }).catch((e: unknown) => log(`error: ${e}`))
+        }).catch((e: unknown) => error(`unknown error: `, e))
 })()
 
 

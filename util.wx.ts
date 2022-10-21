@@ -4,7 +4,7 @@ import * as css from "https://deno.land/x/css@0.3.0/mod.ts";
 import {Rule} from "https://deno.land/x/css@0.3.0/mod.ts";
 import {Rules} from "./data.rule.ts";
 import {Themes} from "./data.theme.ts";
-import {ValueRange, StyleRuleSetting, initRuleSetting, StyleInfo, generateVars} from "./util.style.ts";
+import {UnitValueDeclaration, StyleRuleSetting, initRuleSetting, StyleInfo, generateVars} from "./util.style.ts";
 
 export interface PageInfo {
     page: string,
@@ -35,7 +35,7 @@ export interface WxRunningConfig {
     cssOption: {
         rootElementName: string
         componentGlobalCss: RegExp
-        one: ValueRange
+        one: UnitValueDeclaration
     }
 
     watchOptions: {
@@ -45,6 +45,7 @@ export interface WxRunningConfig {
     }
 
     debugOptions: {
+        printRule: boolean
         printConfigInfo: boolean
         showPageClassNames: boolean
         showPageClassAttribute: boolean
@@ -90,10 +91,11 @@ export const DefaultConfig: WxRunningConfig = {
     cssOption: {
         rootElementName: "page",
         componentGlobalCss: /addGlobalClass:\s*true/,
-        one: {from: 1, to: 7.5, scale: 3, unit: "vmin"},
+        one: {from: 1, to: 7.5, precision: 3, unit: "vmin"},
     },
 
     debugOptions: {
+        printRule: true,
         printConfigInfo: true,
         showPageClassNames: false,
         showPageClassAttribute: false,

@@ -3,26 +3,39 @@ import {log} from "./util.common.ts";
 
 
 /**
- * 表示数值，有些值不能整除，使用 from/to/scale 进行描述
+ * value representation, value equals to from / to,
+ * e.g 0.5 = 1/2
  */
-export interface ValueRange {
+export interface UnitValueDeclaration {
+    /**
+     *  dividend
+     */
     from: number
+    /**
+     * divisor
+     */
     to: number
-    scale: number
+    /**
+     * precision, number of chars after decimal point
+     */
+    precision: number
+    /**
+     * unit with number, e.g. vmin, rpx, em
+     */
     unit: string
 }
 
 
 /**
- * 原子样式规则
+ * atomic style rule
  */
-interface AtomicStyleRule {
+export interface AtomicStyleRule {
     /**
-     * 包名
+     * package name to manage rules
      */
     package: string
     /**
-     * 规则描述
+     * describe the rule, if syntax is not normal
      */
     desc?: string
     /**
@@ -56,24 +69,63 @@ interface AtomicStyleRule {
     syntaxRegex?: RegExp
 }
 
+/**
+ * Style information for one class name
+ */
 export interface StyleInfo {
-    // ref units
+    /**
+     * ref units, used to generate css vars
+     */
     units: string[],
-    // ref colors
+    /**
+     * ref colors, used to generate css vars
+     */
     colors: string[],
-    // final declaration of the style
+    /**
+     * final declaration of the style, merged in to the global style file
+     */
     styles: string[],
-    // warnings occurs on generating style info
+    /**
+     * warnings occurs on generating style info
+     */
     warnings: string[],
-    // dependencies of classNames, e.g. keyframes
+    /**
+     * dependencies of class names, which name and declaration should merge to the global style file
+     * e.g. keyframes
+     */
     classNames: string[]
 }
 
-
-interface ExprPara {
+/**
+ * parameters used a property value
+ */
+export interface PropertyValueParameter {
+    /**
+     * unit number or expression, placeholder is [U]
+     * support three formats
+     * first, only integer, [N], 0<=N
+     * e.g. 1=1, 2=1
+     * second, decimal value, d[N], 0<=N
+     * e.g. d5=0.5, d05=0.05, d50=0.50, d005=0.005
+     * third, percent value, p[N], 0<=N<=100
+     * e.g. p100=100%, p50=50%
+     */
     unit?: string
+    /**
+     * integer used in expression, placeholder is [N]
+     * always means order, such as color sequence order
+     */
     number?: string
+    /**
+     * color name, placeholder is [C]
+     * value in Themes(see @theme.Themes) is valid
+     */
     color?: string
+    /**
+     * the decimal part of color alpha value, placeholder is [A] with prefix "a"
+     * only support integer
+     * e.g. a5 mean 0.5, a05 means 0.05
+     */
     alpha?: string
 }
 
@@ -83,11 +135,11 @@ export interface StyleRuleSetting {
     themes: string[]
 }
 
-const extraPara = (expression: string, rule: AtomicStyleRule | undefined): ExprPara | undefined => {
+const extraPara = (expression: string, rule: AtomicStyleRule | undefined): PropertyValueParameter | undefined => {
     if (rule == undefined || rule.syntaxRegex == undefined) {
         return undefined
     }
-    const para: ExprPara = {
+    const para: PropertyValueParameter = {
         unit: undefined,
         number: undefined,
         color: undefined,
@@ -161,7 +213,7 @@ export const makeCssForExpr = (expression: string, ruleSetting: StyleRuleSetting
             break
         }
 
-        const para: ExprPara | undefined = extraPara(classRule.classExpr, classRule.rule)
+        const para: PropertyValueParameter | undefined = extraPara(classRule.classExpr, classRule.rule)
         if (para != undefined) {
             if (para.unit) {
                 units.push(para.unit)
@@ -204,7 +256,7 @@ export const makeCssForExpr = (expression: string, ruleSetting: StyleRuleSetting
     return {units: units.compact().unique(), colors: colors.compact().unique(), styles, warnings: [], classNames}
 }
 
-const wrapPara = (expression: string, para?: ExprPara | undefined): string => {
+const wrapPara = (expression: string, para?: PropertyValueParameter | undefined): string => {
     if (expression == "" || para == undefined) {
         return expression || ""
     }
@@ -277,7 +329,7 @@ export const initRuleSetting = (rules: AtomicStyleRule[], themes: string[]): Sty
  * @param rootElementName
  * @param one
  */
-export const generateVars = (units: string[], colors: string[], rootElementName: string, one: ValueRange): string => {
+export const generateVars = (units: string[], colors: string[], rootElementName: string, one: UnitValueDeclaration): string => {
 
     const clearFunctions = [
         {rule: /d/g, value: "0."},
@@ -313,7 +365,7 @@ export const generateVars = (units: string[], colors: string[], rootElementName:
  * @param unit unit number value or percent value
  * @param one unit one's config
  */
-const calcUnitValue = (unit: string, one: ValueRange): string => {
+const calcUnitValue = (unit: string, one: UnitValueDeclaration): string => {
     // zero means nothing without rpx or vm etc.
     if (unit == "0") {
         return "0"
@@ -330,7 +382,7 @@ const calcUnitValue = (unit: string, one: ValueRange): string => {
     // number value
     if (/^([\d\\.]+)$/.test(unit)) {
         const numberValue: number = Number(unit)
-        const scale = Math.pow(10, one.scale)
+        const scale = Math.pow(10, one.precision)
         return Math.round(numberValue * one.from * scale / one.to) / scale + one.unit
     }
 
