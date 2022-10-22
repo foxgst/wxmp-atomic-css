@@ -53,39 +53,117 @@ export interface StyleInfo {
     classNames: string[]
 }
 
+/**
+ * debug option
+ */
 export interface DebugOption {
+    /**
+     * print configuration
+     */
     printConfigInfo: boolean
+    /**
+     * print rules
+     */
     printRule: boolean
+    /**
+     * print themes
+     */
     printThemes: boolean
+    /**
+     * show page files' class names
+     */
     showPageClassNames: boolean
+    /**
+     * show page class attributes
+     */
     showPageClassAttribute: boolean
+    /**
+     * show css files' style names
+     */
     showCssStyleNames: boolean
+    /**
+     * show the beginning of page task
+     */
     showPageTaskBegin: boolean
+    /**
+     * show the result of page task
+     */
     showPageTaskResult: boolean
+    /**
+     * show style task result
+     */
     showStyleTaskResult: boolean
+    /**
+     * show batch task step
+     */
     showTaskStep: boolean
+    /**
+     * show the generated content
+     */
     showFileContent: boolean
 }
 
+/**
+ * data file option
+ */
 export interface DataOption {
+    /**
+     * theme configuration file
+     */
     themeFile: string;
+    /**
+     * rule configuration file
+     */
     ruleFile: string;
 }
 
+/**
+ * watch option
+ */
 export interface WatchOption {
+    /**
+     * refresh duration after the file changes
+     */
     delay: number;
+    /**
+     * extensions of files which could update global css file
+     */
     fileTypes: string[];
+    /**
+     * refresh order count
+     */
     refreshCount: number;
 }
 
+/**
+ * process option
+ */
 export interface ProcessOption {
+    /**
+     * promise concurrent limit
+     */
     promiseLimit: number;
 }
 
+/**
+ * css option
+ */
 export interface CssOption {
+    /**
+     * root element name for declaration css variables
+     */
     rootElementName: string;
+    /**
+     * is component file using global css
+     */
     componentGlobalCss: string;
+    /**
+     * unit one declaration
+     */
     one: UnitValueDeclaration;
+    /**
+     * single color, e.g. primary, black, white
+     */
     singleColorThemes: string[];
 }
 
@@ -140,11 +218,30 @@ export interface FileStructure {
     cssInputFiles: string[];
 }
 
+/**
+ * temp data
+ */
 interface TempData {
+    /**
+     * effected rule setting cache
+     */
     ruleSetting?: StyleRuleSetting;
+    /**
+     * effected theme map cache
+     */
     themeMap?: ThemeMap;
+    /**
+     * page class names dictionary
+     */
     pageClassNameMap: { [index: string]: string[] };
+    /**
+     * global style names
+     */
     globalClassNames: string[]
+    /**
+     * global style names
+     */
+    tempGlobalClassNames: string[]
 }
 
 export interface WxRunningConfig {

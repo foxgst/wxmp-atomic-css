@@ -5,10 +5,12 @@
 export const log = (...args: unknown[]) => console.log(nowString(), ...args)
 
 /**
- * error to console
- * @param args objects
+ * print error information
  */
-export const error = (...args: unknown[]) => console.error(nowString(), ...args)
+export const printError = (time: Timing) => (e: unknown): Promise<number> => {
+    log(`[data] job terminated, cost ${time.es()} ms`, e)
+    return Promise.resolve(1)
+};
 
 /**
  * return date time string of now, format is yyyy-MM-dd HH:mm:ss.zzz

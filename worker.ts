@@ -1,9 +1,8 @@
-import "https://deno.land/x/arrays/mod.ts";
-import "https://deno.land/std/fs/mod.ts";
-import {error, log, timing} from "./util.ts"
+import "https://deno.land/x/arrays@v1.0.21/mod.ts";
+import "https://deno.land/std@0.160.0/fs/mod.ts";
+import {printError, log, timing} from "./util.ts"
 import {OptionalRunningConfig, WxRunningConfig} from "./data.config.ts";
 import * as wx from "./mod.wx.ts";
-import {FileEvent} from "./mod.wx.ts";
 
 const newProcess = (config: WxRunningConfig): Promise<number> => {
     const time = timing()
@@ -11,18 +10,20 @@ const newProcess = (config: WxRunningConfig): Promise<number> => {
         wx.parseGlobalStyleNames(config),
         wx.parseMiniProgramPages(config).then(wx.batchPromise(wx.parsePageClassNames, config)),
         wx.parseComponentPages(config).then(wx.batchPromise(wx.parseComponentClassNames, config)),
-    ]).then(wx.mergeTargetClassNames)
+    ]).then(wx.mergeTargetClassNames(config))
         .then(wx.generateContent(config))
         .then(wx.saveContent(config))
-        .then(wx.finishAndPrintCostTime(time))
+        .then(wx.finishAndPrintCostTime(config, time))
+        .catch(printError(time))
 }
 
-const appendProcess = (config: WxRunningConfig, fileEvents: FileEvent[]): Promise<number> => {
+const appendProcess = (config: WxRunningConfig, fileEvents: string[]): Promise<number> => {
     const time = timing()
     return wx.generateClassNamesFromFileEvents(config, fileEvents)
         .then(wx.generateContent(config))
         .then(wx.saveContent(config))
-        .then(wx.finishAndPrintCostTime(time))
+        .then(wx.finishAndPrintCostTime(config, time))
+        .catch(printError(time))
 }
 
 (function () {
@@ -38,7 +39,7 @@ const appendProcess = (config: WxRunningConfig, fileEvents: FileEvent[]): Promis
     Deno.addSignalListener("SIGINT", sigIntHandler);
 
     wx.readRunningConfig("data/config.json", {
-        debugOption: {printRule: true, printThemes: true, showTaskStep: true}
+        // debugOption: {showPageClassNames: true, showPageTaskBegin: true, showPageTaskResult: true}
     } as OptionalRunningConfig)
         .then(wx.ensureWorkDir)
         .then(wx.printRunningConfig)
@@ -47,5 +48,5 @@ const appendProcess = (config: WxRunningConfig, fileEvents: FileEvent[]): Promis
             newProcess(config)
                 .then(() => log("service ready, Press Ctrl-C to exit"))
                 .then(() => wx.watchMiniProgramPageChange(config, appendProcess))
-        }).catch((e: unknown) => error(`unknown error: `, e))
+        }).catch((e: unknown) => log(e))
 })()

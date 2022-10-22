@@ -2,7 +2,6 @@ import {log} from "./util.ts";
 import {AtomicStyleRule, StyleRuleSetting} from "./data.rule.ts";
 import {StyleInfo, UnitValueDeclaration} from "./data.config.ts";
 import {ThemeMap} from "./data.theme.ts";
-import {getRuleSetting} from "./mod.wx.ts";
 
 /**
  * parameters used a property value
@@ -238,7 +237,7 @@ const calcUnitValue = (unit: string, one: UnitValueDeclaration): string => {
 
     // number value
     if (/^([\d\\.]+)$/.test(unit)) {
-        const numberValue: number = Number(unit)
+        const numberValue = Number(unit)
         const scale = Math.pow(10, one.precision)
         return Math.round(numberValue * one.from * scale / one.to) / scale + one.unit
     }

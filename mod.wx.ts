@@ -1,6 +1,7 @@
 import {htmltok, TokenType} from "https://deno.land/x/htmltok@v0.0.3/private/htmltok.ts";
 import * as css from "https://deno.land/x/css@0.3.0/mod.ts";
 import {Rule} from "https://deno.land/x/css@0.3.0/mod.ts";
+import {withoutAll} from "https://deno.land/std@0.160.0/collections/without_all.ts";
 import {log, promiseLimit, sleep, Timing} from "./util.ts";
 import {readAndInitRuleSetting, rulesToString, StyleRuleSetting} from "./data.rule.ts";
 import {readThemes, ThemeMap, themesToString} from "./data.theme.ts";
@@ -146,12 +147,7 @@ export const parseComponentPages = async (config: WxRunningConfig): Promise<Page
     }
 
     const pageInfos = componentsPages.filter((page: string) => page.endsWith(config.fileExtension.page))
-        .map((page: string): PageInfo => ({
-            page,
-            jsPath: componentsPages.indexOf(page.replace(config.fileExtension.page, config.fileExtension.js)) > -1,
-            tsPath: componentsPages.indexOf(page.replace(config.fileExtension.page, config.fileExtension.ts)) > -1,
-            cssPath: componentsPages.indexOf(page.replace(config.fileExtension.page, config.fileExtension.css)) > -1,
-        }))
+        .map((page: string): PageInfo => makePageInfo(page, componentsPages, config))
     return Promise.resolve(pageInfos)
 }
 
@@ -268,23 +264,14 @@ export const ensureWorkDir = async (config: WxRunningConfig): Promise<WxRunningC
     }
 
     log(`[task] invalid working directory, can not found ${config.fileStructure.cssMainFile} or ${config.fileStructure.miniProgramDir} directory`)
-    return Promise.reject("should set working directory to wechat mini program dir")
+    return Promise.reject({code: -1, msg: "should set working directory to wechat mini program dir"})
 }
 
-
-export interface FileEvent {
-    removed: boolean
-    path: string
-}
-
-export const watchMiniProgramPageChange = async (config: WxRunningConfig, refreshEvent: (config: WxRunningConfig, fileEvents: FileEvent[]) => Promise<number>) => {
+export const watchMiniProgramPageChange = async (config: WxRunningConfig, refreshEvent: (config: WxRunningConfig, fileEvents: string[]) => Promise<number>) => {
     const watcher = Deno.watchFs(config.workDir);
     let refreshCount = 0
     let refreshWorking = false
-
-
-    let fileEventStack: FileEvent[] = new Array<FileEvent>()
-
+    let fileEventStack: string[] = new Array<string>()
 
     for await (const event of watcher) {
         // log(">>>> event", event);
@@ -293,12 +280,10 @@ export const watchMiniProgramPageChange = async (config: WxRunningConfig, refres
         const fileEvents = event.paths.map((path: string) => {
             const fileExtension = path.slice(path.lastIndexOf("."))
             const fileMatched = config.watchOption.fileTypes.indexOf(fileExtension) > -1
-            return fileMatched ? {
-                removed: event.kind == "remove",
-                path: path
-            } : undefined
-        }).compact()
-        fileEventStack.push(...fileEvents)
+            return fileMatched ? `${event.kind == "remove" ? "-" : "*"}${path}` : undefined
+        }).compact().unique()
+
+        fileEventStack = [...fileEventStack, ...fileEvents].unique()
 
         // if refreshing is pending, prevent to refresh
         if (refreshWorking || fileEventStack.length == 0) {
@@ -307,18 +292,18 @@ export const watchMiniProgramPageChange = async (config: WxRunningConfig, refres
 
         refreshWorking = true
 
-        const processEvents = [...fileEventStack]
-        fileEventStack = fileEventStack.slice(processEvents.length)
-
-        const changedFiles = processEvents.map((fileEvent: FileEvent) => `${fileEvent.removed ? "-" : "*"}${fileEvent.path}`).unique().join(",")
-        log(`[file changed] ${changedFiles}`)
-
         sleep(config.watchOption.delay)
-            .then(() => refreshEvent(config, processEvents))
             .then(() => {
-                refreshWorking = false
-                log(`[task] wxmp-atomic-css refresh ${++refreshCount}x`)
+                const processEvents = [...fileEventStack]
+                fileEventStack = fileEventStack.slice(processEvents.length)
+                log(`[file changed] ${processEvents.join(",")}`)
+                return refreshEvent(config, processEvents)
             })
+            .then(() => {
+                log(`[task] wxmp-atomic-css refresh ${++refreshCount}x`)
+            }).finally(() => {
+            refreshWorking = false
+        })
     }
 }
 
@@ -339,7 +324,7 @@ export const getThemeMap = async (config: WxRunningConfig): Promise<ThemeMap> =>
     return config.tempData.themeMap;
 }
 
-export const mergeTargetClassNames = (values: Awaited<string[]>[]): Promise<string[]> => {
+export const mergeTargetClassNames = (config: WxRunningConfig) => (values: Awaited<string[]>[]): Promise<string[]> => {
     const globalStyleNames = values[0] as string[]
     const pageClassNames = values[1] as string[]
     const componentPageClassNames = values[2] as string[]
@@ -360,9 +345,10 @@ export const mergeTargetClassNames = (values: Awaited<string[]>[]): Promise<stri
 
     if (missingClassNames.length == 0) {
         log(`[data] no class names to create`)
-        return Promise.reject(1)
+        return Promise.reject({code: 1, msg: "class names has no update"})
     }
 
+    config.tempData.tempGlobalClassNames = missingClassNames
     log(`[data] new task for generate [${missingClassNames.length}] class names = [${missingClassNames.join(",")}]`)
     return Promise.resolve(missingClassNames)
 }
@@ -377,7 +363,7 @@ export const batchPromise = <T>(handler: (task: T, config: WxRunningConfig) => P
 }
 
 export const generateContent = (config: WxRunningConfig) => async (classNames: string[]) => {
-    log(`[data] new task to create [${classNames.length}] class names, [${classNames.join(",")}]`)
+    log(`[data] new task to create [${classNames.length}] class names`)
     return style.generateStyleContents(classNames, await getRuleSetting(config), await getThemeMap(config),
         config.debugOption.showStyleTaskResult);
 }
@@ -418,33 +404,73 @@ export const saveContent = (config: WxRunningConfig) => async (classResultList: 
     Deno.writeTextFileSync(`${config.workDir}/${config.fileStructure.cssOutputFile}`, styleContent)
     log(`[task] save ${styleContent.length} chars to ${config.fileStructure.cssOutputFile}`)
 
+    // config.tempData.globalClassNames = config.tempData.tempGlobalClassNames
+
     return Promise.resolve(0)
 }
 
-export const finishAndPrintCostTime = (time: Timing) => (result: number) => {
+export const finishAndPrintCostTime = (config: WxRunningConfig, time: Timing) => (result: number) => {
+    config.tempData.globalClassNames = config.tempData.tempGlobalClassNames
+    config.tempData.tempGlobalClassNames = []
     log(`[data] job done, cost ${time.es()} ms, result = ${result}`)
     return Promise.resolve(0)
 };
 
-export const generateClassNamesFromFileEvents = async (config: WxRunningConfig, fileEvents: FileEvent[]): Promise<string[]> => {
+export const generateClassNamesFromFileEvents = async (config: WxRunningConfig, fileEvents: string[]): Promise<string[]> => {
 
+    let updated = 0
     for (const fileEvent of fileEvents) {
-        if (fileEvent.removed) {
-            if (config.tempData.pageClassNameMap[fileEvent.path]) {
-                delete config.tempData.pageClassNameMap[fileEvent.path]
+        const removed = fileEvent.charAt(0) == "-"
+        const path = fileEvent.slice(1)
+        if (removed) {
+            if (config.tempData.pageClassNameMap[path]) {
+                delete config.tempData.pageClassNameMap[path]
             }
         } else {
-            if (fileEvent.path.includes(config.fileStructure.componentDir)) {
-                const pageInfo = await generatePageInfo(config, fileEvent.path)
-                config.tempData.pageClassNameMap[fileEvent.path] = await parseComponentClassNames(pageInfo, config)
+            if (path.includes(config.fileStructure.componentDir)) {
+                const pageInfo = await generatePageInfo(config, path)
+                const classNames = await parseComponentClassNames(pageInfo, config)
+                config.tempData.pageClassNameMap[path] = classNames
+                log(`[task] component page [${path}] - [${classNames}]`)
+                if (withoutAll(classNames, config.tempData.globalClassNames).length > 0) {
+                    updated = 1
+                }
+            } else {
+                const classNames = await parsePageClassNames(path, config)
+                config.tempData.pageClassNameMap[path] = classNames
+                log(`[task] page [${path}] - [${classNames}]`)
+
+                // log(`classNames`, classNames.join(","))
+                // log(`config.tempData.globalClassNames`, config.tempData.globalClassNames.join(","))
+                // log(`withoutAll(classNames, config.tempData.globalClassNames)`, withoutAll(classNames, config.tempData.globalClassNames).join(","))
+                if (withoutAll(classNames, config.tempData.globalClassNames).length > 0) {
+                    updated = 1
+                }
             }
         }
     }
 
-    return Object.keys(config.tempData.pageClassNameMap)
+    if (updated == 0) {
+        return Promise.reject({code: 1, msg: "page class names already generated"})
+    }
+
+    const allClassNames: string[] = Object.keys(config.tempData.pageClassNameMap)
         .map((page: string) => config.tempData.pageClassNameMap[page])
-        .flatten().compact().unique()
+        .flat().compact().unique()
+
+    // if (allClassNames.filter((m: string) => config.tempData.globalClassNames.indexOf(m) == -1).length == 0) {
+    //     return Promise.reject({code: 1, msg: "page class names already generated"})
+    // }
+    config.tempData.tempGlobalClassNames = allClassNames
+    return allClassNames
 }
+
+const makePageInfo = (page: string, componentsPages: string[], config: WxRunningConfig) => ({
+    page,
+    jsPath: componentsPages.indexOf(page.replace(config.fileExtension.page, config.fileExtension.js)) > -1,
+    tsPath: componentsPages.indexOf(page.replace(config.fileExtension.page, config.fileExtension.ts)) > -1,
+    cssPath: componentsPages.indexOf(page.replace(config.fileExtension.page, config.fileExtension.css)) > -1,
+});
 
 export const generatePageInfo = async (config: WxRunningConfig, page: string): Promise<PageInfo> => {
     const curDir = page.slice(0, page.lastIndexOf("/"))
@@ -454,10 +480,5 @@ export const generatePageInfo = async (config: WxRunningConfig, page: string): P
             componentsPages.push(`${curDir}/${dirEntry.name}`)
         }
     }
-    return {
-        page,
-        jsPath: componentsPages.indexOf(page.replace(config.fileExtension.page, config.fileExtension.js)) > -1,
-        tsPath: componentsPages.indexOf(page.replace(config.fileExtension.page, config.fileExtension.ts)) > -1,
-        cssPath: componentsPages.indexOf(page.replace(config.fileExtension.page, config.fileExtension.css)) > -1,
-    }
+    return makePageInfo(page, componentsPages, config)
 }
