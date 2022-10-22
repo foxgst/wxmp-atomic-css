@@ -59,5 +59,8 @@
   "processOption": {
     "promiseLimit": 5
   },
-  "tempData": {}
+  "tempData": {
+    "pageClassNameMap": {},
+    "globalClassNames": []
+  }
 }

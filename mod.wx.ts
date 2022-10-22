@@ -121,6 +121,8 @@ export const parseComponentClassNames = (pageInfo: PageInfo, config: WxRunningCo
     if (config.debugOption.showPageTaskResult) {
         log(`[data] add create styles task, [${toCreateClassNames.length}] class names, [${toCreateClassNames.join(",")}] from ${pageInfo.page}`)
     }
+
+    config.tempData.pageClassNameMap[pageInfo.page] = toCreateClassNames
     return Promise.resolve(toCreateClassNames)
 }
 
@@ -176,7 +178,7 @@ export const parseMiniProgramPages = async (config: WxRunningConfig): Promise<st
 }
 
 export const parseGlobalStyleNames = async (config: WxRunningConfig): Promise<string[]> => {
-    return await [...config.fileStructure.cssInputFiles, config.fileStructure.cssMainFile].map((filename: string) => {
+    const classNames = await [...config.fileStructure.cssInputFiles, config.fileStructure.cssMainFile].map((filename: string) => {
         const result = readClassNamesFromCssFile(`${config.workDir}/${filename}`)
         if (result == undefined) {
             log(`[task] missing global css file [${filename}] and ignore`)
@@ -185,6 +187,8 @@ export const parseGlobalStyleNames = async (config: WxRunningConfig): Promise<st
         }
         return result
     }).flat().compact().unique()
+    config.tempData.globalClassNames = classNames
+    return classNames
 }
 
 export const parsePageClassNames = (pagePath: string, config: WxRunningConfig): Promise<string[]> => {
@@ -222,6 +226,7 @@ export const parsePageClassNames = (pagePath: string, config: WxRunningConfig): 
             log(`[check]${pageEmpty}need to create [${missingStyleNames.length}] styles [${missingStyleNames.join(",")}]`)
         }
     }
+    config.tempData.pageClassNameMap[pagePath] = missingStyleNames || []
     return Promise.resolve(missingStyleNames)
 }
 
@@ -267,33 +272,53 @@ export const ensureWorkDir = async (config: WxRunningConfig): Promise<WxRunningC
 }
 
 
-export const watchMiniProgramPageChange = async (config: WxRunningConfig, refreshEvent: (config: WxRunningConfig) => Promise<number>) => {
+export interface FileEvent {
+    removed: boolean
+    path: string
+}
+
+export const watchMiniProgramPageChange = async (config: WxRunningConfig, refreshEvent: (config: WxRunningConfig, fileEvents: FileEvent[]) => Promise<number>) => {
     const watcher = Deno.watchFs(config.workDir);
     let refreshCount = 0
     let refreshWorking = false
 
+
+    let fileEventStack: FileEvent[] = new Array<FileEvent>()
+
+
     for await (const event of watcher) {
         // log(">>>> event", event);
 
-        if (refreshWorking) {
+        // to add events
+        const fileEvents = event.paths.map((path: string) => {
+            const fileExtension = path.slice(path.lastIndexOf("."))
+            const fileMatched = config.watchOption.fileTypes.indexOf(fileExtension) > -1
+            return fileMatched ? {
+                removed: event.kind == "remove",
+                path: path
+            } : undefined
+        }).compact()
+        fileEventStack.push(...fileEvents)
+
+        // if refreshing is pending, prevent to refresh
+        if (refreshWorking || fileEventStack.length == 0) {
             continue
         }
 
-        const needRefresh: boolean = event.paths.map((path: string) => path.slice(path.lastIndexOf(".")))
-            .filter((fileExtension: string) => config.watchOption.fileTypes.indexOf(fileExtension) > -1)
-            .length > 0
-        if (needRefresh && !refreshWorking) {
-            refreshWorking = true
+        refreshWorking = true
 
-            log(`[file changed] ${event.paths.join(";")}`)
+        const processEvents = [...fileEventStack]
+        fileEventStack = fileEventStack.slice(processEvents.length)
 
-            sleep(config.watchOption.delay)
-                .then(() => refreshEvent(config))
-                .then(() => {
-                    refreshWorking = false
-                    log(`[task] wxmp-atomic-css refresh ${++refreshCount}x`)
-                })
-        }
+        const changedFiles = processEvents.map((fileEvent: FileEvent) => `${fileEvent.removed ? "-" : "*"}${fileEvent.path}`).unique().join(",")
+        log(`[file changed] ${changedFiles}`)
+
+        sleep(config.watchOption.delay)
+            .then(() => refreshEvent(config, processEvents))
+            .then(() => {
+                refreshWorking = false
+                log(`[task] wxmp-atomic-css refresh ${++refreshCount}x`)
+            })
     }
 }
 
@@ -351,17 +376,23 @@ export const batchPromise = <T>(handler: (task: T, config: WxRunningConfig) => P
         .then((classNames: string[][]) => classNames.flat().compact().unique())
 }
 
-export const generateContent = (config: WxRunningConfig) => async (missingClassNames: string[]) =>
-    style.generateStyleContents(missingClassNames, await getRuleSetting(config), await getThemeMap(config),
+export const generateContent = (config: WxRunningConfig) => async (classNames: string[]) => {
+    log(`[data] new task to create [${classNames.length}] class names, [${classNames.join(",")}]`)
+    return style.generateStyleContents(classNames, await getRuleSetting(config), await getThemeMap(config),
         config.debugOption.showStyleTaskResult);
+}
 
 export const saveContent = (config: WxRunningConfig) => async (classResultList: StyleInfo[]): Promise<number> => {
     const styles = classResultList.map((m: StyleInfo) => m.styles).flat()
 
+
     const warnings = classResultList.map((m: StyleInfo) => m.warnings).flat().compact().unique().sort()
-    if (warnings.length > 0 && styles.length == 0) {
-        log(`[data] no updates with warnings`)
-        return Promise.resolve(2)
+    if (warnings.length > 0) {
+        log(`[warnings] ${warnings.length} class names not matched, ${warnings.join(",")}`)
+        if (styles.length == 0) {
+            log(`[data] no updates with warnings`)
+            return Promise.resolve(2)
+        }
     }
 
     const units = classResultList.map((m: StyleInfo) => m.units).flat().compact().unique().sort()
@@ -394,3 +425,39 @@ export const finishAndPrintCostTime = (time: Timing) => (result: number) => {
     log(`[data] job done, cost ${time.es()} ms, result = ${result}`)
     return Promise.resolve(0)
 };
+
+export const generateClassNamesFromFileEvents = async (config: WxRunningConfig, fileEvents: FileEvent[]): Promise<string[]> => {
+
+    for (const fileEvent of fileEvents) {
+        if (fileEvent.removed) {
+            if (config.tempData.pageClassNameMap[fileEvent.path]) {
+                delete config.tempData.pageClassNameMap[fileEvent.path]
+            }
+        } else {
+            if (fileEvent.path.includes(config.fileStructure.componentDir)) {
+                const pageInfo = await generatePageInfo(config, fileEvent.path)
+                config.tempData.pageClassNameMap[fileEvent.path] = await parseComponentClassNames(pageInfo, config)
+            }
+        }
+    }
+
+    return Object.keys(config.tempData.pageClassNameMap)
+        .map((page: string) => config.tempData.pageClassNameMap[page])
+        .flatten().compact().unique()
+}
+
+export const generatePageInfo = async (config: WxRunningConfig, page: string): Promise<PageInfo> => {
+    const curDir = page.slice(0, page.lastIndexOf("/"))
+    const componentsPages: string[] = []
+    for await (const dirEntry of Deno.readDir(curDir)) {
+        if (dirEntry.isFile) {
+            componentsPages.push(`${curDir}/${dirEntry.name}`)
+        }
+    }
+    return {
+        page,
+        jsPath: componentsPages.indexOf(page.replace(config.fileExtension.page, config.fileExtension.js)) > -1,
+        tsPath: componentsPages.indexOf(page.replace(config.fileExtension.page, config.fileExtension.ts)) > -1,
+        cssPath: componentsPages.indexOf(page.replace(config.fileExtension.page, config.fileExtension.css)) > -1,
+    }
+}

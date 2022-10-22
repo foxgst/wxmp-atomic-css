@@ -3,14 +3,23 @@ import "https://deno.land/std/fs/mod.ts";
 import {error, log, timing} from "./util.ts"
 import {OptionalRunningConfig, WxRunningConfig} from "./data.config.ts";
 import * as wx from "./mod.wx.ts";
+import {FileEvent} from "./mod.wx.ts";
 
-const mainProcess = (config: WxRunningConfig): Promise<number> => {
+const newProcess = (config: WxRunningConfig): Promise<number> => {
     const time = timing()
     return Promise.all([
         wx.parseGlobalStyleNames(config),
         wx.parseMiniProgramPages(config).then(wx.batchPromise(wx.parsePageClassNames, config)),
         wx.parseComponentPages(config).then(wx.batchPromise(wx.parseComponentClassNames, config)),
     ]).then(wx.mergeTargetClassNames)
+        .then(wx.generateContent(config))
+        .then(wx.saveContent(config))
+        .then(wx.finishAndPrintCostTime(time))
+}
+
+const appendProcess = (config: WxRunningConfig, fileEvents: FileEvent[]): Promise<number> => {
+    const time = timing()
+    return wx.generateClassNamesFromFileEvents(config, fileEvents)
         .then(wx.generateContent(config))
         .then(wx.saveContent(config))
         .then(wx.finishAndPrintCostTime(time))
@@ -35,8 +44,8 @@ const mainProcess = (config: WxRunningConfig): Promise<number> => {
         .then(wx.printRunningConfig)
         .then((config: WxRunningConfig) => {
             log("[task] start auto generation after started");
-            mainProcess(config)
+            newProcess(config)
                 .then(() => log("service ready, Press Ctrl-C to exit"))
-                .then(() => wx.watchMiniProgramPageChange(config, mainProcess))
+                .then(() => wx.watchMiniProgramPageChange(config, appendProcess))
         }).catch((e: unknown) => error(`unknown error: `, e))
 })()

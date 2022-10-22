@@ -143,6 +143,8 @@ export interface FileStructure {
 interface TempData {
     ruleSetting?: StyleRuleSetting;
     themeMap?: ThemeMap;
+    pageClassNameMap: { [index: string]: string[] };
+    globalClassNames: string[]
 }
 
 export interface WxRunningConfig {
