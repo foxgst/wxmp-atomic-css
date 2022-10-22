@@ -298,24 +298,20 @@ export const watchMiniProgramPageChange = async (config: WxRunningConfig, refres
 }
 
 export const getRuleSetting = async (config: WxRunningConfig): Promise<StyleRuleSetting> => {
-    if (config.tempData["ruleSetting"]) {
-        return config.tempData["ruleSetting"] as StyleRuleSetting
+    if (config.tempData.ruleSetting == undefined) {
+        config.tempData.ruleSetting = await readAndInitRuleSetting(config.dataOption.ruleFile)
+        log(`[task] read ${config.tempData.ruleSetting.rules.length} rules`)
     }
-    const ruleSetting = await readAndInitRuleSetting(config.dataOption.ruleFile);
-    config.tempData["ruleSetting"] = ruleSetting
-    log(`[task] read ${ruleSetting.rules.length} rules`)
-    return ruleSetting;
+    return config.tempData.ruleSetting;
 }
 
 
 export const getThemeMap = async (config: WxRunningConfig): Promise<ThemeMap> => {
-    if (config.tempData["themeMap"]) {
-        return config.tempData["themeMap"] as ThemeMap
+    if (config.tempData.themeMap == undefined) {
+        config.tempData.themeMap = await readThemes(config.dataOption.themeFile)
+        log(`[task] read ${Object.keys(config.tempData.themeMap).length} themes`)
     }
-    const themeMap = await readThemes(config.dataOption.themeFile)
-    config.tempData["themeMap"] = themeMap
-    log(`[task] read ${Object.keys(themeMap).length} themes`)
-    return themeMap;
+    return config.tempData.themeMap;
 }
 
 export const mergeTargetClassNames = (values: Awaited<string[]>[]): Promise<string[]> => {
@@ -345,7 +341,6 @@ export const mergeTargetClassNames = (values: Awaited<string[]>[]): Promise<stri
     log(`[data] new task for generate [${missingClassNames.length}] class names = [${missingClassNames.join(",")}]`)
     return Promise.resolve(missingClassNames)
 }
-
 
 
 export const batchPromise = <T>(handler: (task: T, config: WxRunningConfig) => Promise<string[]>,

@@ -1,4 +1,6 @@
 import {PropertyOptional, readDataFile} from "./util.ts";
+import {StyleRuleSetting} from "./data.rule.ts";
+import {ThemeMap} from "./data.theme.ts";
 
 /**
  * value representation, value equals to from / to,
@@ -138,6 +140,11 @@ export interface FileStructure {
     cssInputFiles: string[];
 }
 
+interface TempData {
+    ruleSetting?: StyleRuleSetting;
+    themeMap?: ThemeMap;
+}
+
 export interface WxRunningConfig {
 
     /**
@@ -148,7 +155,7 @@ export interface WxRunningConfig {
     /**
      * temp data, which store global rules and themes
      */
-    tempData: { [index: string]: unknown }
+    tempData: TempData
 
     /**
      * mini program file structure
