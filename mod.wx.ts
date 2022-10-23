@@ -7,6 +7,7 @@ import {readAndInitRuleSetting, rulesToString, StyleRuleSetting} from "./data.ru
 import {readThemes, ThemeMap, themesToString} from "./data.theme.ts";
 import {OptionalRunningConfig, readConfig, StyleInfo, WxRunningConfig} from "./data.config.ts";
 import * as style from "./mod.style.ts";
+import * as Colors from "https://deno.land/std/fmt/colors.ts";
 
 export interface PageInfo {
     page: string,
@@ -74,7 +75,7 @@ const readClassNamesFromCssFile = (cssFilePath: string): string[] | undefined =>
         }
         return undefined
     } catch (e: unknown) {
-        log(`[error] occurs on readClassNamesFromCssFile`, e)
+        log(Colors.red(`[error] occurs on readClassNamesFromCssFile`, e))
         return undefined
     }
 }
@@ -169,7 +170,7 @@ export const parseMiniProgramPages = async (config: WxRunningConfig): Promise<st
             return [...app.pages, ...(app.subpackages || [])
                 .map((pkg: AppSubpackage) => pkg.pages.map((page: string) => `${pkg.root}/${page}`)).flat()]
         })
-    log(`[task] read wechat mini program pages from config file, found [${pages.length}] pages`)
+    log(`[task] read wechat mini program pages from config file, found [ ${Colors.blue(pages.length.toString())} ] pages`)
     return pages.map((page: string) => `${config.workDir}/${page}.wxml`)
 }
 
@@ -179,7 +180,7 @@ export const parseGlobalStyleNames = async (config: WxRunningConfig): Promise<st
         if (result == undefined) {
             log(`[task] missing global css file [${filename}] and ignore`)
         } else {
-            log(`[task] parse global styles names, found [${result.length}] in [${filename}]`)
+            log(`[task] parse global styles names, found [ ${Colors.blue(result.length.toString())} ] in [${filename}]`)
         }
         return result
     }).flat().compact().unique()
@@ -197,7 +198,7 @@ export const parsePageClassNames = (pagePath: string, config: WxRunningConfig): 
 
     const classNames: string[] = parseClassItemFromPage(pagePath, config)
     if (config.debugOption.showPageClassNames) {
-        log(`[check]${pageEmpty}found page class names [${classNames.length}] [${classNames.join(",")}]`)
+        log(`[check]${pageEmpty}found page class names [ ${Colors.blue(classNames.length.toString())} ] [${classNames.join(",")}]`)
     }
 
     const cssFilePath = pagePath.replace(".wxml", ".wxss")
@@ -208,7 +209,7 @@ export const parsePageClassNames = (pagePath: string, config: WxRunningConfig): 
         }
     } else {
         if (config.debugOption.showPageTaskResult) {
-            log(`[check]${pageEmpty}found page style names [${styleNames.length}] [${styleNames.join(",")}]`)
+            log(`[check]${pageEmpty}found page style names [ ${Colors.blue(styleNames.length.toString())} ] [${styleNames.join(",")}]`)
         }
     }
 
@@ -219,7 +220,7 @@ export const parsePageClassNames = (pagePath: string, config: WxRunningConfig): 
         }
     } else {
         if (config.debugOption.showPageTaskResult) {
-            log(`[check]${pageEmpty}need to create [${missingStyleNames.length}] styles [${missingStyleNames.join(",")}]`)
+            log(`[check]${pageEmpty}need to create [ ${Colors.blue(missingStyleNames.length.toString())} ] styles [${missingStyleNames.join(",")}]`)
         }
     }
     config.tempData.pageClassNameMap[pagePath] = missingStyleNames || []
@@ -265,7 +266,7 @@ export const ensureWorkDir = async (config: WxRunningConfig): Promise<WxRunningC
         }
     }
 
-    log(`[task] invalid working directory, can not found ${config.fileStructure.cssMainFile} or ${config.fileStructure.miniProgramDir} directory`)
+    log(Colors.red(`[task] invalid working directory, can not found ${config.fileStructure.cssMainFile} or ${config.fileStructure.miniProgramDir} directory`))
     return Promise.reject({code: -1, msg: "should set working directory to wechat mini program dir"})
 }
 
@@ -298,11 +299,11 @@ export const watchMiniProgramPageChange = async (config: WxRunningConfig, refres
             .then(() => {
                 const processEvents = [...fileEventStack]
                 fileEventStack = fileEventStack.slice(processEvents.length)
-                log(`[file changed] ${processEvents.join(",")}`)
+                log(Colors.bgYellow(Colors.white(`[file changed] ${processEvents.join(",")}`)))
                 return refreshEvent(config, processEvents)
             })
             .then(() => {
-                log(`[task] wxmp-atomic-css refresh ${++refreshCount}x`)
+                log(Colors.green(`[task] wxmp-atomic-css refresh ${++refreshCount}x`))
             }).finally(() => {
             refreshWorking = false
         })
@@ -331,9 +332,9 @@ export const mergeTargetClassNames = (config: WxRunningConfig) => (values: Await
     const pageClassNames = values[1] as string[]
     const componentPageClassNames = values[2] as string[]
 
-    log(`[data] total found [${globalStyleNames.length}] global style names`)
-    log(`[data] total found [${pageClassNames.length}] class names from pages`)
-    log(`[data] total found [${componentPageClassNames.length}] class names from components`)
+    log(`[data] total found [ ${Colors.blue(globalStyleNames.length.toString())} ] global style names`)
+    log(`[data] total found [ ${Colors.blue(pageClassNames.length.toString())} ] class names from pages`)
+    log(`[data] total found [ ${Colors.blue(componentPageClassNames.length.toString())} ] class names from components`)
 
     const missingClassNames: string[] = [].merge(pageClassNames).merge(componentPageClassNames)
         .diff(globalStyleNames).compact().unique().sort()
@@ -342,7 +343,7 @@ export const mergeTargetClassNames = (config: WxRunningConfig) => (values: Await
         .diff(pageClassNames).diff(componentPageClassNames).compact().unique().sort()
 
     if (toRemoveClassNames.length > 0) {
-        log(`[data] [${toRemoveClassNames.length}] class names to remove, [${toRemoveClassNames.join(",")}]`)
+        log(`[data] [ ${Colors.blue(toRemoveClassNames.length.toString())} ] class names to remove, [${toRemoveClassNames.join(",")}]`)
     }
 
     if (missingClassNames.length == 0) {
@@ -351,7 +352,7 @@ export const mergeTargetClassNames = (config: WxRunningConfig) => (values: Await
     }
 
     config.tempData.tempGlobalClassNames = missingClassNames
-    log(`[data] new task for generate [${missingClassNames.length}] class names = [${missingClassNames.join(",")}]`)
+    log(`[data] new task for generate [ ${Colors.blue(missingClassNames.length.toString())} ] class names = [${missingClassNames.join(",")}]`)
     return Promise.resolve(missingClassNames)
 }
 
@@ -365,7 +366,7 @@ export const batchPromise = <T>(handler: (task: T, config: WxRunningConfig) => P
 }
 
 export const generateContent = (config: WxRunningConfig) => async (classNames: string[]): Promise<StyleInfo[]> => {
-    log(`[data] new task to create [${classNames.length}] class names`)
+    log(`[data] new task to create [ ${Colors.blue(classNames.length.toString())} ] class names`)
     return style.generateStyleContents(classNames, await getRuleSetting(config), config.cssOption,
         config.debugOption.showStyleTaskResult);
 }
@@ -376,7 +377,7 @@ export const saveContent = (config: WxRunningConfig) => async (classResultList: 
 
     const warnings = classResultList.map((m: StyleInfo) => m.warnings).flat().compact().unique().sort()
     if (warnings.length > 0) {
-        log(`[warnings] ${warnings.length} class names not matched, ${warnings.join(",")}`)
+        log(Colors.yellow(`[warn] ${warnings.length} class names not matched, ${warnings.join(",")}`))
         if (styles.length == 0) {
             log(`[data] no updates with warnings`)
             return Promise.resolve(2)
@@ -384,10 +385,10 @@ export const saveContent = (config: WxRunningConfig) => async (classResultList: 
     }
 
     const units = classResultList.map((m: StyleInfo) => m.units).flat().compact().unique().sort()
-    log(`[data] new task to create [${units.length}] unit vars, [${units.join(",")}]`)
+    log(`[data] new task to create [ ${Colors.blue(units.length.toString())} ] unit vars, [${units.join(",")}]`)
 
     const colors = classResultList.map((m: StyleInfo) => m.colors).flat().compact().unique().sort()
-    log(`[data] new task to create [${colors.length}] color vars, [${colors.join(",")}]`)
+    log(`[data] new task to create [ ${Colors.blue(colors.length.toString())} ] color vars, [${colors.join(",")}]`)
 
     log(`[task] begin to write output file`)
 
@@ -400,7 +401,7 @@ export const saveContent = (config: WxRunningConfig) => async (classResultList: 
         varsContent = varsContent.replace(/;}/g, "}")
     }
     Deno.writeTextFileSync(`${config.workDir}/${config.fileStructure.cssVarFile}`, varsContent)
-    log(`[task] save ${varsContent.length} chars to ${config.fileStructure.cssVarFile}`)
+    log(`[task] save ${Colors.blue(varsContent.length.toString())} chars to ${config.fileStructure.cssVarFile}`)
 
     let styleContent = classResultList.map((m: StyleInfo) => m.styles).flat().join("")
     if (config.cssOption.varPrefix) {
@@ -414,7 +415,7 @@ export const saveContent = (config: WxRunningConfig) => async (classResultList: 
         log(`[data] styleContent=${styleContent}`)
     }
     Deno.writeTextFileSync(`${config.workDir}/${config.fileStructure.cssOutputFile}`, styleContent)
-    log(`[task] save ${styleContent.length} chars to ${config.fileStructure.cssOutputFile}`)
+    log(`[task] save ${Colors.blue(styleContent.length.toString())} chars to ${config.fileStructure.cssOutputFile}`)
 
     // config.tempData.globalClassNames = config.tempData.tempGlobalClassNames
 
@@ -424,7 +425,7 @@ export const saveContent = (config: WxRunningConfig) => async (classResultList: 
 export const finishAndPrintCostTime = (config: WxRunningConfig, time: Timing) => (result: number) => {
     config.tempData.globalClassNames = config.tempData.tempGlobalClassNames
     config.tempData.tempGlobalClassNames = []
-    log(`[data] job done, cost ${time.es()} ms, result = ${result}`)
+    log(Colors.green(`[data] job done, cost ${time.es()} ms, result = ${result}`))
     return Promise.resolve(0)
 };
 
