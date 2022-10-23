@@ -39,7 +39,14 @@ const partiallyUpdate = (config: WxRunningConfig, fileEvents: string[]): Promise
         Deno.exit();
     });
 
-    wx.readRunningConfig("https://raw.githubusercontent.com/foxgst/wxmp-atomic-css/fix", "data/config.json", {
+    const isWindows = Deno.build.os === "windows";
+    let scriptPath = new URL(import.meta.url).pathname
+    const isLocal = scriptPath.startsWith("/")
+    scriptPath = scriptPath.replaceAll("/", isWindows && isLocal ? "\\" : "/").substring(isWindows ? 1 : 0);
+    scriptPath = scriptPath.substring(0, scriptPath.lastIndexOf(isWindows && isLocal ? "\\" : "/"));
+
+    log("scriptPath", scriptPath)
+    wx.readRunningConfig(scriptPath, "data/config.json", {
         debugOption: {printConfigInfo: true, printThemes: true, printRule: true},
         processOption: {promiseLimit: 1}
     } as OptionalRunningConfig)
