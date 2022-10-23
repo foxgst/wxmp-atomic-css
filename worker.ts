@@ -41,12 +41,13 @@ const partiallyUpdate = (config: WxRunningConfig, fileEvents: string[]): Promise
 
     const isWindows = Deno.build.os === "windows";
     let scriptPath = new URL(import.meta.url).toString()
-    log("scriptPath", scriptPath)
+    log("scriptPath1", scriptPath)
+    log("scriptPath1 href", new URL(import.meta.url).href)
     const isLocal = scriptPath.startsWith("/")
     scriptPath = scriptPath.replaceAll("/", isWindows && isLocal ? "\\" : "/").substring(isWindows ? 1 : 0);
     scriptPath = scriptPath.substring(0, scriptPath.lastIndexOf(isWindows && isLocal ? "\\" : "/"));
 
-    log("scriptPath", scriptPath)
+    log("scriptPath2", scriptPath)
     wx.readRunningConfig(scriptPath, "data/config.json", {
         debugOption: {printConfigInfo: true, printThemes: true, printRule: true},
         processOption: {promiseLimit: 1}
