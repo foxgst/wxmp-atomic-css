@@ -25,6 +25,9 @@
     "css": ".wxss"
   },
   "cssOption": {
+    "varPrefix": "mp-",
+    "minify": false,
+    "palette": "ant-design",
     "rootElementName": "page",
     "componentGlobalCss": "addGlobalClass:\\s*true",
     "one": {

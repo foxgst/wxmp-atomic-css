@@ -363,9 +363,9 @@ export const batchPromise = <T>(handler: (task: T, config: WxRunningConfig) => P
         .then((classNames: string[][]) => classNames.flat().compact().unique())
 }
 
-export const generateContent = (config: WxRunningConfig) => async (classNames: string[]) => {
+export const generateContent = (config: WxRunningConfig) => async (classNames: string[]): Promise<StyleInfo[]> => {
     log(`[data] new task to create [${classNames.length}] class names`)
-    return style.generateStyleContents(classNames, await getRuleSetting(config), await getThemeMap(config),
+    return style.generateStyleContents(classNames, await getRuleSetting(config), config.cssOption,
         config.debugOption.showStyleTaskResult);
 }
 
@@ -391,14 +391,24 @@ export const saveContent = (config: WxRunningConfig) => async (classResultList: 
     log(`[task] begin to write output file`)
 
     const themeMap = await getThemeMap(config)
-    const varsContent = style.generateVars(units, colors, config.cssOption, themeMap)
+    let varsContent = style.generateVars(units, colors, config.cssOption, themeMap)
     if (config.debugOption.showFileContent) {
         log(`[data] varsContent=${varsContent}`)
+    }
+    if (config.cssOption.minify) {
+        varsContent = varsContent.replace(/;}/g, "}")
     }
     Deno.writeTextFileSync(`${config.workDir}/${config.fileStructure.cssVarFile}`, varsContent)
     log(`[task] save ${varsContent.length} chars to ${config.fileStructure.cssVarFile}`)
 
-    const styleContent = classResultList.map((m: StyleInfo) => m.styles).flat().join("\n")
+    let styleContent = classResultList.map((m: StyleInfo) => m.styles).flat().join("")
+    if (config.cssOption.varPrefix) {
+        styleContent = styleContent.replace(/--color-/g, `--${config.cssOption.varPrefix}color-`)
+        styleContent = styleContent.replace(/--unit-/g, `--${config.cssOption.varPrefix}unit-`)
+    }
+    if (config.cssOption.minify) {
+        styleContent = styleContent.replace(/\s+/g, "").replace(/;}/g, "}")
+    }
     if (config.debugOption.showFileContent) {
         log(`[data] styleContent=${styleContent}`)
     }

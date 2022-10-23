@@ -34,13 +34,12 @@ const partiallyUpdate = (config: WxRunningConfig, fileEvents: string[]): Promise
     log("==========================================================");
     log("starting wxmp-atomic-css");
 
-    const sigIntHandler = () => {
+    Deno.addSignalListener("SIGINT", () => {
         log("wxmp-atomic-css service closed");
         Deno.exit();
-    };
-    Deno.addSignalListener("SIGINT", sigIntHandler);
+    });
 
-    wx.readRunningConfig("https://raw.githubusercontent.com/foxgst/wxmp-atomic-css/main", "data/config.json", {
+    wx.readRunningConfig(".", "data/config.json", {
         debugOption: {printConfigInfo: true, printThemes: true, printRule: true},
         processOption: {promiseLimit: 1}
     } as OptionalRunningConfig)

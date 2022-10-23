@@ -36,7 +36,7 @@ export interface PropertyValueParameter {
     alpha?: string
 }
 
-const extraPara = (expression: string, rule: AtomicStyleRule | undefined, themeMap: ThemeMap): PropertyValueParameter | undefined => {
+const extraPara = (expression: string, rule: AtomicStyleRule | undefined): PropertyValueParameter | undefined => {
     if (rule == undefined || rule.syntaxRegex == undefined) {
         return undefined
     }
@@ -48,26 +48,10 @@ const extraPara = (expression: string, rule: AtomicStyleRule | undefined, themeM
     }
     const matchResult = expression.match(rule.syntaxRegex)
     if (matchResult && matchResult.groups) {
-        if (matchResult.groups["U"]) {
-            para.unit = matchResult.groups["U"]
-        }
-        if (matchResult.groups["C"]) {
-            para.color = matchResult.groups["C"]
-        }
-        if (matchResult.groups["N"]) {
-            para.number = matchResult.groups["N"]
-        }
-        if (matchResult.groups["A"]) {
-            para.alpha = matchResult.groups["A"]
-        }
-        if (para.color) {
-            if (para.number == undefined) {
-                para.number = "1"
-            } else if (themeMap[para.color].length == 1) {
-                para.alpha = para.number
-                para.number = "1"
-            }
-        }
+        para.unit = matchResult.groups["U"]
+        para.color = matchResult.groups["C"]
+        para.number = matchResult.groups["N"]
+        para.alpha = matchResult.groups["A"]
     }
     return para
 }
@@ -93,7 +77,7 @@ const searchRulesByExpr = (expression: string, ruleSetting: StyleRuleSetting): A
 }
 
 
-export const makeCssForExpr = (expression: string, ruleSetting: StyleRuleSetting, themeMap: ThemeMap): StyleInfo => {
+export const makeCssForExpr = (expression: string, ruleSetting: StyleRuleSetting, cssOption: CssOption): StyleInfo => {
     const rules = searchRulesByExpr(expression, ruleSetting)
     if (rules == undefined || rules.length == 0) {
         return {units: [], colors: [], styles: [], warnings: [expression], classNames: []}
@@ -114,16 +98,24 @@ export const makeCssForExpr = (expression: string, ruleSetting: StyleRuleSetting
             break
         }
 
-        const para: PropertyValueParameter | undefined = extraPara(classRule.classExpr, classRule.rule, themeMap)
+        const para: PropertyValueParameter | undefined = extraPara(classRule.classExpr, classRule.rule)
         if (para != undefined) {
             if (para.unit) {
                 units.push(para.unit)
             }
             if (para.color) {
                 if (para.alpha == undefined) {
-                    colors.push(`${para.color}-${para.number || 0}`)
+                    if (para.number) {
+                        colors.push(`${para.color}-${para.number}`)
+                    } else {
+                        colors.push(`${para.color}`)
+                    }
                 } else {
-                    colors.push(`${para.color}-${para.number || 0}-${para.alpha || ""}`)
+                    if (para.number) {
+                        colors.push(`${para.color}-${para.number}-${para.alpha}`)
+                    } else {
+                        colors.push(`${para.color}-${para.alpha}`)
+                    }
                 }
             }
         }
@@ -142,7 +134,7 @@ export const makeCssForExpr = (expression: string, ruleSetting: StyleRuleSetting
             units.push(...(classRule.rule?.units || []))
             colors.push(...(classRule.rule?.colors || []))
             const style = wrapPara(classRule.rule.expr, para)
-            styles.push("    " + style)
+            styles.push(`${cssOption.minify ? "" : "    "}${style}${cssOption.minify ? "" : "\n"}`)
         }
         if (classRule.rule.dependencies) {
             classNames.push(...classRule.rule.dependencies)
@@ -150,8 +142,8 @@ export const makeCssForExpr = (expression: string, ruleSetting: StyleRuleSetting
     }
 
     if (styles.length > 0) {
-        styles.unshift(`.${expression}{`)
-        styles.push("}")
+        styles.unshift(`.${expression}${cssOption.minify ? "" : " "}{${cssOption.minify ? "" : "\n"}`)
+        styles.push(`}${cssOption.minify ? "" : "\n"}`)
     }
 
     return {units: units.compact().unique(), colors: colors.compact().unique(), styles, warnings: [], classNames}
@@ -195,24 +187,24 @@ export const generateVars = (units: string[], colors: string[], cssOption: CssOp
     units = units.sort((left: string, right: string) => getUnitNumber(left) - getUnitNumber(right))
 
     const vars: string[] = []
-    vars.push(`${cssOption.rootElementName} {`)
+    vars.push(`${cssOption.rootElementName}${cssOption.minify ? "" : " "}{`)
     units.forEach((unit: string) => {
-        vars.push(`${cssOption.styleIndent}--unit-${unit}: ${calcUnitValue(unit, cssOption.one)};`)
+        vars.push(`${cssOption.minify ? "" : cssOption.styleIndent}--${cssOption.varPrefix}unit-${unit}:${cssOption.minify ? "" : " "}${calcUnitValue(unit, cssOption.one)};`)
     })
 
     colors.forEach((color: string) => {
-        const colorInfo = color.match(/(?<theme>[a-z]+)-(?<order>\d+)(-(?<alpha>\d+))?/)?.groups
+        const colorInfo = color.match(/(?<theme>[a-z]+)(-(?<order>\d+))?(-(?<alpha>\d+))?/)?.groups
         if (!colorInfo) {
             throw Error(`invalid color ${color}`)
         }
 
         const {theme, order, alpha} = colorInfo
-        vars.push(`${cssOption.styleIndent}--color-${color}: ${generateColorVar(theme, order, alpha, themeMap)};`)
+        vars.push(`${cssOption.minify ? "" : cssOption.styleIndent}--${cssOption.varPrefix}color-${color}:${cssOption.minify ? "" : " "}${generateColorVar(cssOption.palette, theme, order, alpha, themeMap)};`)
     })
 
 
     vars.push("}")
-    return vars.join("\n")
+    return vars.join(cssOption.minify ? "" : "\n")
 }
 
 /**
@@ -224,11 +216,6 @@ const calcUnitValue = (unit: string, one: UnitValueDeclaration): string => {
     // zero means nothing without rpx or vm etc.
     if (unit == "0") {
         return "0"
-    }
-
-    // alias full means "100%", equals to "p100"
-    if (unit == "full") {
-        return "100%"
     }
 
     // transform decimal value, "d" means "0.", "d5" means "0.5"
@@ -251,48 +238,64 @@ const calcUnitValue = (unit: string, one: UnitValueDeclaration): string => {
 
 /**
  * generate color variables
+ * @param palette color palette name
  * @param themeName theme name
  * @param colorOrder color order
  * @param alpha alpha value
  * @param themeMap the theme map
  */
-const generateColorVar = (themeName: string, colorOrder: string, alpha: string, themeMap: ThemeMap): string => {
+const generateColorVar = (palette: string, themeName: string, colorOrder: string, alpha: string, themeMap: ThemeMap): string => {
     if (themeName == "") {
         throw Error("missing theme name")
     }
-    if (!themeMap[themeName]) {
+
+    if (themeMap[themeName]) {
+        alpha = colorOrder
+        if (alpha == undefined || alpha == "1") {
+            return `${themeMap[themeName]}`
+        } else {
+            return `${appendAlpha(themeMap[themeName], alpha)}`
+        }
+    }
+    if (!themeMap.palette[palette]) {
+        throw Error(`missing palette ${palette}`)
+    }
+    if (!themeMap.palette[palette][themeName]) {
         throw Error(`missing theme ${themeName}`)
     }
-    const colors = themeMap[themeName]
+    const colors = themeMap.palette[palette][themeName]
     if (colors.length == 0) {
-        throw Error(`theme ${themeName} is empty`)
+        throw Error(`palette ${palette} theme ${themeName} is empty`)
     }
     if (!colorOrder) {
-        return `rgb(${colors[0]})`
+        return `${colors[0]}`
     }
 
     const orderValue = parseInt(colorOrder) - 1
     if (orderValue >= 0 && orderValue <= colors.length - 1) {
         if (alpha == undefined || alpha == "1") {
-            return `rgb(${colors[orderValue]})`
+            return `${colors[orderValue]}`
         } else {
-            return `rgba(${colors[orderValue]}, 0.${alpha})`
+            return `${appendAlpha(colors[orderValue], alpha)}`
         }
     }
 
     throw Error(`invalid color value ${themeName}-${colorOrder}-${alpha}`)
 }
 
+const appendAlpha = (color: string, alpha: number) => `${color}${Math.round(alpha * 2.56).toString(16)}`
+
+
 /**
  * generate style contents for class names
  * @param missingClassNames class names
  * @param ruleSetting rules
- * @param themeMap themes
+ * @param cssOption css option
  * @param showStyleTaskResult flag if show style task result
  */
-export const generateStyleContents = (missingClassNames: string[], ruleSetting: StyleRuleSetting, themeMap: ThemeMap, showStyleTaskResult: boolean): StyleInfo[] => {
+export const generateStyleContents = (missingClassNames: string[], ruleSetting: StyleRuleSetting, cssOption: CssOption, showStyleTaskResult: boolean): StyleInfo[] => {
     return missingClassNames.map((classExpr: string): StyleInfo => {
-        const {units, colors, styles, warnings, classNames} = makeCssForExpr(classExpr, ruleSetting, themeMap)
+        const {units, colors, styles, warnings, classNames} = makeCssForExpr(classExpr, ruleSetting, cssOption)
 
         if (showStyleTaskResult) {
             const order = "".padStart(12, " ")

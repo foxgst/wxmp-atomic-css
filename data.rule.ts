@@ -112,7 +112,8 @@ export const rulesToString = (rules: AtomicStyleRule[]): string => {
     const rulesMap = arrayMap(rules, m => m.package)
     return `total ${rulesMap.keys.length} package and ${rules.length} rules\n`
         + "------------------ rules begin ------------------\n"
+        + `    ${"package".padEnd(25, " ")} syntax list\n`
         + rulesMap.keys.map((pkg, index) => `${(index + 1).toString().padStart(2, " ")})`
-            + ` package = ${pkg}, syntax = [${rulesMap.map[pkg].map(m => m.syntax).join(",")}]`).join("\n")
+            + ` ${pkg.padEnd(25, " ")} ${rulesMap.map[pkg].map(m => m.syntax).join(", ")}`).join("\n")
         + "\n------------------ rules end ------------------"
 }

@@ -150,6 +150,18 @@ export interface ProcessOption {
  */
 export interface CssOption {
     /**
+     * variables prefix
+     */
+    varPrefix: string;
+    /**
+     * flag if minify
+     */
+    minify: boolean;
+    /**
+     * palette provider
+     */
+    palette: string;
+    /**
      * root element name for declaration css variables
      */
     rootElementName: string;

@@ -16,7 +16,10 @@
 import {readDataFile} from "./util.ts";
 
 export interface ThemeMap {
-    [index: string]: string[]
+    primary: string,
+    black: string,
+    white: string,
+    palette: { [index: string]: { [index: string]: string[] } }
 }
 
 export const readThemes = (filePath: string): Promise<ThemeMap> => readDataFile<ThemeMap>(filePath)
@@ -25,10 +28,18 @@ export const readThemes = (filePath: string): Promise<ThemeMap> => readDataFile<
  * toString() of them
  */
 export const themesToString = (themeMap: ThemeMap): string => {
-    const themeNames = Object.keys(themeMap)
-    return `total ${themeNames.length} themes\n`
+    const providers = Object.keys(themeMap.palette)
+    return `total ${providers.length} providers\n`
         + "------------------ theme begin ------------------\n"
-        + themeNames.map((themeName, index) => `${(index + 1).toString().padStart(2, " ")})`
-            + ` theme = ${themeName}, colors = [${themeMap[themeName].join(",")}]`).join("\n")
+        + `${"primary:".padEnd(15, " ")}${themeMap.primary}\n`
+        + `${"black:".padEnd(15, " ")}${themeMap.black}\n`
+        + `${"white:".padEnd(15, " ")}${themeMap.white}\n`
+        + `palette: \n`
+        + Object.keys(themeMap.palette).map(palette =>
+            `  ${palette}:\n`
+            + Object.keys(themeMap.palette[palette]).map(theme =>
+            `    ${theme.padEnd(10, " ")}[${themeMap.palette[palette][theme].join(",")}]`
+            ).join("\n"))
+            .join("\n")
         + "\n------------------ theme end ------------------"
 }
