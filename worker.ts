@@ -40,7 +40,7 @@ const partiallyUpdate = (config: WxRunningConfig, fileEvents: string[]): Promise
     };
     Deno.addSignalListener("SIGINT", sigIntHandler);
 
-    wx.readRunningConfig("data/config.json", {
+    wx.readRunningConfig("https://raw.githubusercontent.com/foxgst/wxmp-atomic-css/main", "data/config.json", {
         // debugOption: {showPageClassNames: true, showPageTaskBegin: true, showPageTaskResult: true}
         processOption: { promiseLimit: 1 }
     } as OptionalRunningConfig)

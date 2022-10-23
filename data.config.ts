@@ -251,6 +251,11 @@ interface TempData {
 export interface WxRunningConfig {
 
     /**
+     * config file source, from remote repo or local directory
+     */
+    configSource: string
+
+    /**
      * working dir, default value is ".", should detect if contains correct contents
      */
     workDir: string

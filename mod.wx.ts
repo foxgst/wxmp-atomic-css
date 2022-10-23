@@ -226,9 +226,10 @@ export const parsePageClassNames = (pagePath: string, config: WxRunningConfig): 
     return Promise.resolve(missingStyleNames)
 }
 
-export const readRunningConfig = async (configFilePath: string, customConfig?: OptionalRunningConfig): Promise<WxRunningConfig> => {
-    const runningConfig = await readConfig(configFilePath)
+export const readRunningConfig = async (configSource: string, configFilePath: string, customConfig?: OptionalRunningConfig): Promise<WxRunningConfig> => {
+    const runningConfig = await readConfig(`${configSource}/${configFilePath}`)
     const config: WxRunningConfig = Object.assign({}, runningConfig, customConfig || {})
+    config.configSource = configSource
     return Promise.resolve(config)
 }
 
@@ -309,7 +310,7 @@ export const watchMiniProgramPageChange = async (config: WxRunningConfig, refres
 
 export const getRuleSetting = async (config: WxRunningConfig): Promise<StyleRuleSetting> => {
     if (config.tempData.ruleSetting == undefined) {
-        config.tempData.ruleSetting = await readAndInitRuleSetting(config.dataOption.ruleFile)
+        config.tempData.ruleSetting = await readAndInitRuleSetting(`${config.configSource}/${config.dataOption.ruleFile}`)
         log(`[task] read ${config.tempData.ruleSetting.rules.length} rules`)
     }
     return config.tempData.ruleSetting;
@@ -318,7 +319,7 @@ export const getRuleSetting = async (config: WxRunningConfig): Promise<StyleRule
 
 export const getThemeMap = async (config: WxRunningConfig): Promise<ThemeMap> => {
     if (config.tempData.themeMap == undefined) {
-        config.tempData.themeMap = await readThemes(config.dataOption.themeFile)
+        config.tempData.themeMap = await readThemes(`${config.configSource}/${config.dataOption.themeFile}`)
         log(`[task] read ${Object.keys(config.tempData.themeMap).length} themes`)
     }
     return config.tempData.themeMap;
