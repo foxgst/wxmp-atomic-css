@@ -29,6 +29,12 @@ iwr https://deno.land/install.ps1 -useb | iex
 deno run --allow-read --allow-write --allow-net https://deno.land/x/wxmp_atomic_css@v0.0.9/worker.ts .
 ```
 
+or
+
+```bash
+deno run --allow-read --allow-write --allow-net https://raw.githubusercontent.com/foxgst/wxmp-atomic-css/main/worker.ts .
+```
+
 the result is  
 
 ``` text
