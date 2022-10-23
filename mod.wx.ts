@@ -303,7 +303,7 @@ export const watchMiniProgramPageChange = async (config: WxRunningConfig, refres
                 return refreshEvent(config, processEvents)
             })
             .then(() => {
-                log(Colors.green(`[task] wxmp-atomic-css refresh ${++refreshCount}x`))
+                log(Colors.green(Colors.bold(`[task] wxmp-atomic-css refresh ${++refreshCount}x`)))
             }).finally(() => {
             refreshWorking = false
         })
