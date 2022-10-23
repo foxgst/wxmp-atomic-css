@@ -39,7 +39,7 @@ const partiallyUpdate = (config: WxRunningConfig, fileEvents: string[]): Promise
         Deno.exit();
     });
 
-    wx.readRunningConfig(".", "data/config.json", {
+    wx.readRunningConfig("https://raw.githubusercontent.com/foxgst/wxmp-atomic-css/fix", "data/config.json", {
         debugOption: {printConfigInfo: true, printThemes: true, printRule: true},
         processOption: {promiseLimit: 1}
     } as OptionalRunningConfig)
