@@ -41,8 +41,8 @@
     "styleIndent": "    "
   },
   "dataOption": {
-    "themeFile": "https://raw.githubusercontent.com/foxgst/wxmp-atomic-css/main/data/themes.json",
-    "ruleFile": "https://raw.githubusercontent.com/foxgst/wxmp-atomic-css/main/data/rules.json"
+    "themeFile": "data/themes.json",
+    "ruleFile": "data/rules.json"
   },
   "debugOption": {
     "printConfigInfo": false,
