@@ -315,20 +315,55 @@ partially content
     "130,0,20",
     "92,0,17"
   ],
-  "orange": [ ...  ],
-  "yellow": [ ...  ],
-  "green": [ ...  ],
-  "blue": [ ...  ],
-  "purple": [ ...  ],
-  "magenta": [[ ...  ] ],
-  "cyan": [ ...  ],
-  "lime": [ ...  ],
-  "gold": [ ...  ],
-  "volcano": [ ...  ]
+  "orange": [ ],
+  "yellow": [ ],
+  "green": [ ],
+  "blue": [ ],
+  "purple": [ ],
+  "magenta": [ ],
+  "cyan": [ ],
+  "lime": [ ],
+  "gold": [ ],
+  "volcano": [ ]
 }
 
 
 ```
 
 
-# the
+# rule 
+## rule variables
+- `[U]` width/height/text unit value, `p` means percent, `d` means decimal, `p5`=5%, `p50`=50%, `d5`=0.5, `d05`=0.05 
+- `[C]` color name, as theme name
+- `[N]` order number for colors or others, only number
+- `[A]` color alpha, also means opacity, `a5` means 0.5, `a05` means 0.05
+
+
+## rule syntax
+
+1) package = spacing.padding.core, syntax = [ `safe-bottom` ]
+2) package = spacing.padding.ext, syntax = [ `p-[U]`,`px-[U]`,`py-[U]`,`pt-[U]`,`pb-[U]`,`pl-[U]`,`pr-[U]` ]
+3) package = spacing.margin.ext, syntax = [ `m-[U]`,`mx-[U]`,`my-[U]`,`mt-[U]`,`mb-[U]`,`ml-[U]`,`mr-[U]` ]
+4) package = sizing.size.ext, syntax = [ `wh-screen`,`wh-full`,`wh-[U]` ]
+5) package = sizing.width.ext, syntax = [ `w-full`,`w-[U]`,`mw-[U]`,`xw-[U]` ]
+6) package = sizing.height.ext, syntax = [ `h-full`,`h-[U]`,`mh-[U]`,`xh-[U]` ]
+7) package = size.gap.ext, syntax = [ `gap-[U]`,`gap-x-[U]`,`gap-y-[U]` ]
+8) package = layout.float.core, syntax = [ `pos-abs`,`pos-rel`,`pos-fix`,`pos-sticky` ]
+9) package = layout.float.ext, syntax = [ `pos-tl-[U]`,`pos-tr-[U]`,`pos-bl-[U]`,`pos-br-[U]`,`top-[U]`,`bottom-[U]`,`left-[U]`,`right-[U]`,`z-[U]` ]
+10) package = layout.flex.core, syntax = [ `flex-row`,`flex-col`,`flex-row-r`,`flex-col-r`,`flex-wrap`,`flex-cc`,`flex-lc`,`flex-rc`,`ai-start`,`ai-center`,`ai-end`,`jc-start`,`jc-center`,`jc-end`,`jc-between`,`jc-around`,`jc-evenly` ]
+11) package = layout.flex.ext, syntax = [ `c[N]`,`order-[N]` ]
+12) package = layout.grid.ext, syntax = [ `grid-[N]c`,`col-span-full`,`col-span-[N]`,`col-start-[N]`,`col-end-[N]`,`grid-[N]r`,`row-span-full`,`row-span-[N]`,`row-start-[N]`,`row-end-[N]` ]
+13) package = layout.display.ext, syntax = [ `in-block`,`block`,`inline` ]
+14) package = layout.overflow.ext, syntax = [ `overflow-auto`,`overflow-hidden` ]
+15) package = text.size.ext, syntax = [ `text-[U]` ]
+16) package = text.color.ext, syntax = [ `text-[C]-[N]-[A]`,`text-[C]-a[A]`,`text-[C]-[N]`,`text-[C]` ]
+17) package = text.effect.core, syntax = [ `text-left`,`text-center`,`text-right`,`text-break`,`text-bold`,`text-line` ]
+18) package = text.effect.ext, syntax = [ `text-normal`,`text-line-p[N]`,`text-space-[U]`,`text-ellipsis`,`text-uppercase` ]
+19) package = bg.color.ext, syntax = [ `bg-[C]-[N]-a[A]`,`bg-[C]-[N]`,`bg-[C]-a[A]`,`bg-[C]` ]
+20) package = effect.round.core, syntax = [ `round` ]
+21) package = effect.round.ext, syntax = [ `round-[U]`,`round-top-[U]`,`round-bottom-[U]`,`round-left-[U]`,`round-right-[U]`,`round-tl-[U]`,`round-tr-[U]`,`round-bl-[U]`,`round-br-[U]` ]
+22) package = effect.border.core, syntax = [ `border`,`border-left`,`border-right`,`border-top`,`border-bottom`,`border-transparent` ]
+23) package = effect.border.ext, syntax = [ `border-dashed`,`border-[U]`,`border-[C]-[N]-a[A]`,`border-[C]-[N]`,`border-[C]` ]
+24) package = effect.shadow.ext, syntax = [ `shadow`,`shadow-1`,`shadow-2`,`shadow-3`,`shadow-4`,`shadow-5` ]
+25) package = effect.opacity.ext, syntax = [ `opacity-[N]` ]
+26) package = transform.rotate.ext, syntax = [ `rotate-[N]` ]

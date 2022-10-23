@@ -41,8 +41,8 @@ const partiallyUpdate = (config: WxRunningConfig, fileEvents: string[]): Promise
     Deno.addSignalListener("SIGINT", sigIntHandler);
 
     wx.readRunningConfig("https://raw.githubusercontent.com/foxgst/wxmp-atomic-css/main", "data/config.json", {
-        // debugOption: {showPageClassNames: true, showPageTaskBegin: true, showPageTaskResult: true}
-        processOption: { promiseLimit: 1 }
+        debugOption: {printConfigInfo: true, printThemes: true, printRule: true},
+        processOption: {promiseLimit: 1}
     } as OptionalRunningConfig)
         .then(wx.ensureWorkDir)
         .then(wx.printRunningConfig)
