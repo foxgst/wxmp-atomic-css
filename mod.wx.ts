@@ -227,7 +227,8 @@ export const parsePageClassNames = (pagePath: string, config: WxRunningConfig): 
 }
 
 export const readRunningConfig = async (configSource: string, configFilePath: string, customConfig?: OptionalRunningConfig): Promise<WxRunningConfig> => {
-    const runningConfig = await readConfig(`${configSource}/${configFilePath}`)
+    // const runningConfig = await readConfig(`${configSource}/${configFilePath}`)
+    import runningConfig from "data/config.json" assert {  type: "json" };
     const config: WxRunningConfig = Object.assign({}, runningConfig, customConfig || {})
     config.configSource = configSource
     return Promise.resolve(config)
