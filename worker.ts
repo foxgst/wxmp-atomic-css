@@ -19,7 +19,7 @@ const fullBuild = (config: WxRunningConfig): Promise<number> => {
         .catch(printError(time))
 }
 
-const partiallyUpdate  = (config: WxRunningConfig, fileEvents: string[]): Promise<number> => {
+const partiallyUpdate = (config: WxRunningConfig, fileEvents: string[]): Promise<number> => {
     const time = timing()
     return wx.generateClassNamesFromFileEvents(config, fileEvents)
         .then(wx.generateContent(config))
@@ -42,6 +42,7 @@ const partiallyUpdate  = (config: WxRunningConfig, fileEvents: string[]): Promis
 
     wx.readRunningConfig("data/config.json", {
         // debugOption: {showPageClassNames: true, showPageTaskBegin: true, showPageTaskResult: true}
+        processOption: { promiseLimit: 1 }
     } as OptionalRunningConfig)
         .then(wx.ensureWorkDir)
         .then(wx.printRunningConfig)

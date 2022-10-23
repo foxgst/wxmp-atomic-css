@@ -38,7 +38,7 @@ export interface AtomicStyleRule {
      */
     colors?: string[],
     /**
-     * regExtp for dynamic expr, which includes [, effected on running
+     * regEx for dynamic expr, which includes [, effected on running
      */
     syntaxRegex?: RegExp
 }
