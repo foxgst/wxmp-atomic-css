@@ -4,7 +4,7 @@ import {printError, log, timing} from "./util.ts"
 import {OptionalRunningConfig, WxRunningConfig} from "./data.config.ts";
 import * as wx from "./mod.wx.ts";
 
-const newProcess = (config: WxRunningConfig): Promise<number> => {
+const fullBuild = (config: WxRunningConfig): Promise<number> => {
     log("[task] start auto generation after started");
     const time = timing()
     return Promise.all([
@@ -19,7 +19,7 @@ const newProcess = (config: WxRunningConfig): Promise<number> => {
         .catch(printError(time))
 }
 
-const appendProcess = (config: WxRunningConfig, fileEvents: string[]): Promise<number> => {
+const partiallyUpdate  = (config: WxRunningConfig, fileEvents: string[]): Promise<number> => {
     const time = timing()
     return wx.generateClassNamesFromFileEvents(config, fileEvents)
         .then(wx.generateContent(config))
@@ -45,7 +45,7 @@ const appendProcess = (config: WxRunningConfig, fileEvents: string[]): Promise<n
     } as OptionalRunningConfig)
         .then(wx.ensureWorkDir)
         .then(wx.printRunningConfig)
-        .then((config: WxRunningConfig) => newProcess(config)
-            .then(() => wx.watchMiniProgramPageChange(config, appendProcess)))
+        .then((config: WxRunningConfig) => fullBuild(config)
+            .then(() => wx.watchMiniProgramPageChange(config, partiallyUpdate)))
         .catch((e: unknown) => log(e))
 })()
