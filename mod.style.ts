@@ -260,10 +260,10 @@ const generateColorVar = (palette: string, themeName: string, colorOrder: string
     if (!themeMap.palette[palette]) {
         throw Error(`missing palette ${palette}`)
     }
-    if (!themeMap.palette[palette][themeName]) {
-        throw Error(`missing theme ${themeName}`)
-    }
     const colors = themeMap.palette[palette][themeName]
+    if (!colors) {
+        throw Error(`missing palette ${palette} theme ${themeName}`)
+    }
     if (colors.length == 0) {
         throw Error(`palette ${palette} theme ${themeName} is empty`)
     }
