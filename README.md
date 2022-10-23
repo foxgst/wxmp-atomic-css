@@ -26,13 +26,13 @@ iwr https://deno.land/install.ps1 -useb | iex
 2 open terminal and run script on the wechat mini program directory
 
 ```bash
-deno run --allow-read --allow-write https://deno.land/x/wxmp_atomic_css@v0.0.7/worker.ts .
+deno run --allow-read --allow-write https://deno.land/x/wxmp_atomic_css@v0.0.8/worker.ts .
 ```
 
 the result is  
 
 ``` text
-❯ deno run --allow-read --allow-write https://deno.land/x/wxmp_atomic_css@v0.0.7/worker.ts .
+❯ deno run --allow-read --allow-write https://deno.land/x/wxmp_atomic_css@v0.0.8/worker.ts .
 2022-10-23 11:02:10.529 ==========================================================
 2022-10-23 11:02:10.531    wxmp-atomic-css: wechat mini program atomic css kit
 2022-10-23 11:02:10.531 ==========================================================
