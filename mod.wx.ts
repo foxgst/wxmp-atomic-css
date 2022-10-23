@@ -313,7 +313,7 @@ export const watchMiniProgramPageChange = async (config: WxRunningConfig, refres
 export const getRuleSetting = async (config: WxRunningConfig): Promise<StyleRuleSetting> => {
     if (config.tempData.ruleSetting == undefined) {
         config.tempData.ruleSetting = await readAndInitRuleSetting(`${config.configSource}/${config.dataOption.ruleFile}`)
-        log(`[task] read ${config.tempData.ruleSetting.rules.length} rules`)
+        log(`[task] read ${Colors.cyan(config.tempData.ruleSetting.rules.length.toString())} rules`)
     }
     return config.tempData.ruleSetting;
 }
@@ -322,7 +322,7 @@ export const getRuleSetting = async (config: WxRunningConfig): Promise<StyleRule
 export const getThemeMap = async (config: WxRunningConfig): Promise<ThemeMap> => {
     if (config.tempData.themeMap == undefined) {
         config.tempData.themeMap = await readThemes(`${config.configSource}/${config.dataOption.themeFile}`)
-        log(`[task] read ${Object.keys(config.tempData.themeMap).length} themes`)
+        log(`[task] read ${Colors.cyan(Object.keys(config.tempData.themeMap).length.toString())} themes`)
     }
     return config.tempData.themeMap;
 }

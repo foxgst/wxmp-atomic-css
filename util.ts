@@ -1,3 +1,5 @@
+import * as Colors from "https://deno.land/std/fmt/colors.ts";
+
 /**
  * log to console
  * @param args objects
@@ -80,7 +82,7 @@ export const promiseLimit = async <T>(taskName: string, taskCount: number, proce
     const taskResults: T[] = new Array<T>()
 
     // must log the beginning of task sequence
-    log(`[task] [${taskName}] begin ${taskCount} tasks`)
+    log(`[task] [${taskName}] begin ${Colors.cyan(taskCount.toString())} tasks`)
 
     for (let i = 0; i < taskCount; i += limit) {
         const currentTasks: Promise<T>[] = new Array<Promise<T>>()
@@ -96,7 +98,7 @@ export const promiseLimit = async <T>(taskName: string, taskCount: number, proce
     }
 
     // must log the end of task sequence
-    log(`[task] [${taskName}] finish ${taskCount} tasks`)
+    log(`[task] [${taskName}] finish ${Colors.cyan(taskCount.toString())} tasks`)
 
     return Promise.resolve(taskResults)
 };
@@ -110,8 +112,7 @@ export const readDataFile = <Type>(filePath: string): Promise<Type> => {
     }
     return Deno.readTextFile(filePath)
         .then((response) => JSON.parse(response))
-        .then((json) => json as Type)
-        .catch((e: unknown) => log("filePath=", filePath, e));
+        .then((json) => json as Type);
 }
 
 export type PropertyOptional<Type> = {
