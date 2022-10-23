@@ -390,7 +390,7 @@ export const saveContent = (config: WxRunningConfig) => async (classResultList: 
     log(`[task] begin to write output file`)
 
     const themeMap = await getThemeMap(config)
-    const varsContent = style.generateVars(units, colors, config.cssOption.rootElementName, config.cssOption.one, themeMap)
+    const varsContent = style.generateVars(units, colors, config.cssOption, themeMap)
     if (config.debugOption.showFileContent) {
         log(`[data] varsContent=${varsContent}`)
     }

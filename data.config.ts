@@ -165,6 +165,10 @@ export interface CssOption {
      * single color, e.g. primary, black, white
      */
     singleColorThemes: string[];
+    /**
+     * CSS style content line indent
+     */
+    styleIndent: string;
 }
 
 export interface FileExtension {

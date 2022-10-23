@@ -1,6 +1,6 @@
 import {log} from "./util.ts";
 import {AtomicStyleRule, StyleRuleSetting} from "./data.rule.ts";
-import {StyleInfo, UnitValueDeclaration} from "./data.config.ts";
+import {CssOption, StyleInfo, UnitValueDeclaration} from "./data.config.ts";
 import {ThemeMap} from "./data.theme.ts";
 
 /**
@@ -142,7 +142,7 @@ export const makeCssForExpr = (expression: string, ruleSetting: StyleRuleSetting
             units.push(...(classRule.rule?.units || []))
             colors.push(...(classRule.rule?.colors || []))
             const style = wrapPara(classRule.rule.expr, para)
-            styles.push(style)
+            styles.push("    " + style)
         }
         if (classRule.rule.dependencies) {
             classNames.push(...classRule.rule.dependencies)
@@ -181,11 +181,10 @@ const wrapPara = (expression: string, para?: PropertyValueParameter | undefined)
  * generate unit and color variables
  * @param units all units
  * @param colors all colors
- * @param rootElementName root element name
- * @param one unit one value
+ * @param cssOption css option
  * @param themeMap the theme map
  */
-export const generateVars = (units: string[], colors: string[], rootElementName: string, one: UnitValueDeclaration, themeMap: ThemeMap): string => {
+export const generateVars = (units: string[], colors: string[], cssOption: CssOption, themeMap: ThemeMap): string => {
 
     const clearFunctions = [
         {rule: /d/g, value: "0."},
@@ -196,9 +195,9 @@ export const generateVars = (units: string[], colors: string[], rootElementName:
     units = units.sort((left: string, right: string) => getUnitNumber(left) - getUnitNumber(right))
 
     const vars: string[] = []
-    vars.push(`${rootElementName} {`)
+    vars.push(`${cssOption.rootElementName} {`)
     units.forEach((unit: string) => {
-        vars.push(`--unit-${unit}: ${calcUnitValue(unit, one)};`)
+        vars.push(`${cssOption.styleIndent}--unit-${unit}: ${calcUnitValue(unit, cssOption.one)};`)
     })
 
     colors.forEach((color: string) => {
@@ -208,7 +207,7 @@ export const generateVars = (units: string[], colors: string[], rootElementName:
         }
 
         const {theme, order, alpha} = colorInfo
-        vars.push(`--color-${color}: ${generateColorVar(theme, order, alpha, themeMap)};`)
+        vars.push(`${cssOption.styleIndent}--color-${color}: ${generateColorVar(theme, order, alpha, themeMap)};`)
     })
 
 

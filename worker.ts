@@ -5,6 +5,7 @@ import {OptionalRunningConfig, WxRunningConfig} from "./data.config.ts";
 import * as wx from "./mod.wx.ts";
 
 const newProcess = (config: WxRunningConfig): Promise<number> => {
+    log("[task] start auto generation after started");
     const time = timing()
     return Promise.all([
         wx.parseGlobalStyleNames(config),
@@ -14,6 +15,7 @@ const newProcess = (config: WxRunningConfig): Promise<number> => {
         .then(wx.generateContent(config))
         .then(wx.saveContent(config))
         .then(wx.finishAndPrintCostTime(config, time))
+        .then(() => log("service ready, Press Ctrl-C to exit"))
         .catch(printError(time))
 }
 
@@ -43,10 +45,7 @@ const appendProcess = (config: WxRunningConfig, fileEvents: string[]): Promise<n
     } as OptionalRunningConfig)
         .then(wx.ensureWorkDir)
         .then(wx.printRunningConfig)
-        .then((config: WxRunningConfig) => {
-            log("[task] start auto generation after started");
-            newProcess(config)
-                .then(() => log("service ready, Press Ctrl-C to exit"))
-                .then(() => wx.watchMiniProgramPageChange(config, appendProcess))
-        }).catch((e: unknown) => log(e))
+        .then((config: WxRunningConfig) => newProcess(config)
+            .then(() => wx.watchMiniProgramPageChange(config, appendProcess)))
+        .catch((e: unknown) => log(e))
 })()

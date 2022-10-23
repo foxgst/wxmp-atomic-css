@@ -37,7 +37,8 @@
       "primary",
       "white",
       "black"
-    ]
+    ],
+    "styleIndent": "    "
   },
   "dataOption": {
     "themeFile": "data/themes.json",
