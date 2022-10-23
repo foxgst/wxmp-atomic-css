@@ -110,7 +110,8 @@ export const readDataFile = <Type>(filePath: string): Promise<Type> => {
     }
     return Deno.readTextFile(filePath)
         .then((response) => JSON.parse(response))
-        .then((json) => json as Type);
+        .then((json) => json as Type)
+        .catch((e: unknown) => log("filePath=", filePath, e));
 }
 
 export type PropertyOptional<Type> = {

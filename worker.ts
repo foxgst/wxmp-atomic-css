@@ -28,6 +28,18 @@ const partiallyUpdate = (config: WxRunningConfig, fileEvents: string[]): Promise
         .catch(printError(time))
 }
 
+const getScriptPath = () => {
+    const isWindows = Deno.build.os === "windows";
+    let scriptPath = new URL(import.meta.url).toString()
+    const isRemote = scriptPath.startsWith("http")
+    if (isRemote) {
+        return scriptPath.substring(0, scriptPath.lastIndexOf("/"))
+    } else {
+        scriptPath = scriptPath.replace("file:///", "")
+        return scriptPath.substring(0, scriptPath.lastIndexOf("/")).replaceAll("/", isWindows ? "\\" : "/")
+    }
+};
+
 (function () {
     log("==========================================================");
     log("   wxmp-atomic-css: wechat mini program atomic css kit");
@@ -39,17 +51,8 @@ const partiallyUpdate = (config: WxRunningConfig, fileEvents: string[]): Promise
         Deno.exit();
     });
 
-    const isWindows = Deno.build.os === "windows";
-    let scriptPath = new URL(import.meta.url).toString()
-    log("scriptPath1", scriptPath)
-    log("scriptPath1 href", new URL(import.meta.url).href)
-    const isLocal = scriptPath.startsWith("/")
-    scriptPath = scriptPath.replaceAll("/", isWindows && isLocal ? "\\" : "/").substring(isWindows ? 1 : 0);
-    scriptPath = scriptPath.substring(0, scriptPath.lastIndexOf(isWindows && isLocal ? "\\" : "/"));
-
-    log("scriptPath2", scriptPath)
-    wx.readRunningConfig(scriptPath, "data/config.json", {
-        debugOption: {printConfigInfo: true, printThemes: true, printRule: true},
+    wx.readRunningConfig(getScriptPath(), "data/config.json", {
+        // debugOption: {printConfigInfo: true, printThemes: true, printRule: true},
         processOption: {promiseLimit: 1}
     } as OptionalRunningConfig)
         .then(wx.ensureWorkDir)
