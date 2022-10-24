@@ -27,7 +27,7 @@ const count = (config: WxRunningConfig): Promise<number> => {
         wx.parseGlobalStyleNames(config),
         wx.parseMiniProgramPages(config).then(wx.batchCountPromise(wx.countPageClassNames, config)),
         wx.parseComponentPages(config).then(wx.batchCountPromise(wx.countComponentClassNames, config)),
-    ]).then(wx.countTargetClassNames(config, "data/result.md"))
+    ]).then(wx.countTargetClassNames(config, "result.md"))
         .catch(printError(time))
 }
 
