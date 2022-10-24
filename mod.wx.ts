@@ -502,7 +502,7 @@ export const countTargetClassNames = (config: WxRunningConfig, outputFilePath: s
 
     content.push(" ")
     content.push(" ")
-    content.push("# page class name usage list")
+    content.push("# page list")
     content.push(" ")
     content.push("| order | page path | class name unique count | class name occurs count | class name reuse rate |")
     content.push("| :---: | --- | ---: | ---: | ---: |")
