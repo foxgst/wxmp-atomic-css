@@ -37,44 +37,8 @@ deno run --allow-read --allow-write --allow-net https://raw.githubusercontent.co
 
 the result is  
 
-``` text
-❯ deno run --allow-read --allow-write --allow-net https://deno.land/x/wxmp_atomic_css@v0.0.9/worker.ts .
-2022-10-23 11:02:10.529 ==========================================================
-2022-10-23 11:02:10.531    wxmp-atomic-css: wechat mini program atomic css kit
-2022-10-23 11:02:10.531 ==========================================================
-2022-10-23 11:02:10.531 starting wxmp-atomic-css
-2022-10-23 11:02:10.534 [task] working directory found for app.wxss at D:\repo\ryl-wxmp\miniprogram\
-2022-10-23 11:02:10.542 [task] read 15 themes
-2022-10-23 11:02:10.545 [task] read 144 rules
-2022-10-23 11:02:10.545 [task] start auto generation after started
-2022-10-23 11:02:10.576 [task] parse global styles names, found [1] in [font.wxss]
-2022-10-23 11:02:10.578 [task] parse global styles names, found [6] in [app.wxss]
-2022-10-23 11:02:10.580 [task] read wechat mini program pages from config file, found [34] pages
-2022-10-23 11:02:10.580 [task] [parsePageClassNames] begin 34 tasks
-2022-10-23 11:02:10.680 [task] [parsePageClassNames] finish 34 tasks
-2022-10-23 11:02:10.688 [task] [parseComponentClassNames] begin 11 tasks
-2022-10-23 11:02:10.709 [task] [parseComponentClassNames] finish 11 tasks
-2022-10-23 11:02:10.710 [data] total found [7] global style names
-2022-10-23 11:02:10.710 [data] total found [166] class names from pages
-2022-10-23 11:02:10.710 [data] total found [100] class names from components
-2022-10-23 11:02:10.712 [data] [4] class names to remove, [tip-blue,tip-green,tip-red,tip-yellow]
-2022-10-23 11:02:10.712 [data] new task for generate [190] class names = [-a,active-bg,active-text-day,active-text-week,ai-center,ai-end,ai-start,bg-black,bg-black-a50,bg-blue-1,bg-blue-6,bg-gray-1,bg-gray-2,bg-gray-3,bg-gray-4,bg-gray-5,bg-gray-7,bg-green-7,bg-orange-3-a10,bg-orange-6,bg-orange-6-a30,b
-g-primary,bg-primary-a10,bg-red-3-a10,bg-red-7,bg-red-7-a10,bg-white,border,border-2,border-black,border-bottom,border-gray-10,border-green-6,border-orange-6,border-orange-6-a30,border-primary,border-red-6,border-top,border-transparent,c1,c2,c3,currency,day,delay-1000,disable-text,duration-1000,ease-in,
-flex-cc,flex-col,flex-col-r,flex-lc,flex-row,g-,gap-10,gap-20,gap-32,gap-4,grid-2c,grid-3c,grid-5c,grid-7c,h-120,h-150,h-20,h-36,h-64,h-80,h-96,jc-around,jc-between,jc-center,jc-end,jc-start,m-32,mb-10,mb-20,mb-32,mh-120,mh-150,mh-200,ml-10,ml-20,ml-32,ml-4,mr-20,mr-32,mr-4,mt-10,mt-20,mt-32,mt-4,mx-20,
-mx-32,my-10,my-20,normal-bg,normal-text,number,opacity-60,opacity-70,p-10,p-20,p-32,pb-10,pb-20,pb-32,pb-4,pl-10,pl-20,pl-32,pos-abs,pos-rel,pos-tr,pr-20,pr-32,pr-4,pt-10,pt-20,pt-32,px-10,px-20,px-32,px-37,px-4,px-80,py-10,py-20,py-4,py-90,rotate-180,round,round-10,round-10m,round-20,round-36,round-4,r
-ound-8,round-bl-10,round-br-10,round-tl-10,round-tr-10,shadow,text-20,text-24,text-28,text-30,text-32,text-36,text-48,text-black,text-blue-6,text-bold,text-break,text-center,text-gray-6,text-gray-7,text-gray-9,text-green-6,text-line-p150,text-normal,text-orange-6,text-primary,text-red-6,text-right,text-
-white,theme,themes,type,userinfo,userinfo-avatar,userinfo-nickname,w-120,w-96,w-full,wh-144,wh-256,wh-36,wh-48,wh-64,wh-72,wh-96,wh-full,wh-screen,wrap,z-,z-1,z-2,z-3,z-4]
-2022-10-23 11:02:10.713 [data] new task to create [190] class names
-2022-10-23 11:02:10.730 [warnings] 21 class names not matched, -a,active-bg,active-text-day,active-text-week,currency,day,disable-text,g-,normal-bg,normal-text,number,pos-tr,round-10m,theme,themes,type,userinfo,userinfo-avatar,userinfo-nickname,wrap,z-
-2022-10-23 11:02:10.731 [data] new task to create [29] unit vars, [0,1,10,12,120,144,150,2,20,200,24,256,28,3,30,32,36,37,4,48,6,64,72,8,80,90,96,d5,p100]
-2022-10-23 11:02:10.731 [data] new task to create [26] color vars, [black-1,black-1-50,blue-1,blue-6,gray-1,gray-10,gray-2,gray-3,gray-4,gray-5,gray-5-a05,gray-6,gray-7,gray-9,green-6,green-7,orange-3-10,orange-6,orange-6-30,primary-1,primary-1-10,red-3-10,red-6,red-7,red-7-10,white-1]
-2022-10-23 11:02:10.731 [task] begin to write output file
-2022-10-23 11:02:10.734 [task] save 1756 chars to var.wxss
-2022-10-23 11:02:10.736 [task] save 10754 chars to mini.wxss
-2022-10-23 11:02:10.736 [data] job done, cost 191 ms, result = 0
-2022-10-23 11:02:10.736 service ready, Press Ctrl-C to exit
+![image](https://user-images.githubusercontent.com/431807/197428669-131de319-d7da-4e02-bd5e-c38f293edd34.png)
 
-```
 
 3 open any page and add class name, e.g `index/index`
 
