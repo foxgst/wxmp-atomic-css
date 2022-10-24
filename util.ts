@@ -108,18 +108,20 @@ export const readDataFile = <Type>(filePath: string): Promise<Type> => {
     if (filePath.startsWith("http")) {
         return fetch(filePath)
             .then((response) => response.json())
-            .then((json) => json as Type);
+            .then((json) => json as Type)
+            .catch((e: unknown) => log("filePath", filePath, e));
     }
     return Deno.readTextFile(filePath)
         .then((response) => JSON.parse(response))
-        .then((json) => json as Type);
+        .then((json) => json as Type)
+        .catch((e: unknown) => log("filePath", filePath, e));
 }
 
 export type PropertyOptional<Type> = {
     [Property in keyof Type]-?: Type[Property];
 };
 
-export const isAbsolutePath = (filePath: string) : boolean => {
+export const isAbsolutePath = (filePath: string): boolean => {
     return filePath.startsWith("http") || filePath.startsWith("/") || filePath.includes(":")
 }
 
