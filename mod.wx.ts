@@ -4,7 +4,7 @@ import * as css from "https://deno.land/x/css@0.3.0/mod.ts";
 import {Rule} from "https://deno.land/x/css@0.3.0/mod.ts";
 import {withoutAll} from "https://deno.land/std@0.160.0/collections/without_all.ts";
 import {
-    arrayCount,
+    arrayCount, CountArrayMap,
     getScriptParentPath,
     isAbsolutePath,
     log,
@@ -12,7 +12,7 @@ import {
     sleep,
     Timing
 } from "./util.ts";
-import {readAndInitRuleSetting, rulesToString, StyleRuleSetting} from "./data.rule.ts";
+import {AtomicStyleRule, readAndInitRuleSetting, rulesToString, StyleRuleSetting} from "./data.rule.ts";
 import {readThemes, ThemeMap, themesToString} from "./data.theme.ts";
 import {OptionalRunningConfig, readConfig, StyleInfo, WxRunningConfig} from "./data.config.ts";
 import * as style from "./mod.style.ts";
@@ -83,7 +83,7 @@ const readClassNamesFromCssFile = (cssFilePath: string): string[] | undefined =>
         }
         return undefined
     } catch (e: unknown) {
-        log(Colors.red(`[error] occurs on readClassNamesFromCssFile`, e))
+        log(Colors.red(`[error] occurs on readClassNamesFromCssFile`), e)
         return undefined
     }
 }
@@ -165,7 +165,7 @@ export const countComponentClassNames = (pageInfo: PageInfo, config: WxRunningCo
     if (config.debugOption.showPageClassNames) {
         log(`[data] found ${classNames.length} class names in ${pageInfo.page}`)
     }
-    const pageCountMap = {}
+    const pageCountMap: PageClassNameCountMap = {}
     pageCountMap[pageInfo.page] = arrayCount(classNames, m => m)
     return Promise.resolve(pageCountMap)
 }
@@ -270,7 +270,7 @@ export const parsePageClassNames = (pagePath: string, config: WxRunningConfig): 
 }
 
 export interface PageClassNameCountMap {
-    [index: string]: { [index: string]: number }
+    [index: string]: CountArrayMap
 }
 
 export interface PageClassNameSummaryMap {
@@ -281,6 +281,7 @@ export interface PageClassNameSummaryMap {
             pageMap: { [index: string]: number }
         }
     }
+    classNameRuleMap: { [index: string]: AtomicStyleRule }
 }
 
 export const countPageClassNames = (pagePath: string, config: WxRunningConfig): Promise<PageClassNameCountMap> => {
@@ -288,7 +289,7 @@ export const countPageClassNames = (pagePath: string, config: WxRunningConfig): 
         log(`[check] count page class names [${pagePath}]`)
     }
     const classNames: string[] = parseClassItemFromPage(pagePath, config)
-    const pageClassNameMap = {}
+    const pageClassNameMap: PageClassNameCountMap = {}
     pageClassNameMap[pagePath] = arrayCount(classNames, m => m)
     return Promise.resolve(pageClassNameMap)
 }
@@ -296,10 +297,16 @@ export const countPageClassNames = (pagePath: string, config: WxRunningConfig): 
 export const readRunningConfig = async (filePath: string, customConfig?: OptionalRunningConfig): Promise<WxRunningConfig> => {
     const isAbsolutePath = filePath.startsWith("http") || filePath.startsWith("/") || filePath.includes(":");
     const trueFilePath = isAbsolutePath ? filePath : `${getScriptParentPath()}/${filePath}`
-    const runningConfig = await readConfig(trueFilePath)
-    const config: WxRunningConfig = Object.assign({}, runningConfig, customConfig || {})
-    config.configSource = getScriptParentPath(trueFilePath)
-    return Promise.resolve(config)
+    try {
+        const runningConfig = await readConfig(trueFilePath)
+        const config: WxRunningConfig = Object.assign({}, runningConfig, customConfig || {})
+        config.isWindows = Deno.build.os === "windows"
+        config.configSource = getScriptParentPath(trueFilePath)
+        return Promise.resolve(config)
+    } catch (e) {
+        console.log(trueFilePath, e)
+        return Promise.reject(e)
+    }
 }
 
 export const printRunningConfig = async (config: WxRunningConfig): Promise<WxRunningConfig> => {
@@ -337,12 +344,13 @@ export const ensureWorkDir = async (config: WxRunningConfig): Promise<WxRunningC
     return Promise.reject({code: -1, msg: "should set working directory to wechat mini program dir"})
 }
 
-export const watchMiniProgramPageChange = async (config: WxRunningConfig, refreshEvent: (config: WxRunningConfig, fileEvents: string[]) => Promise<number>) => {
+export const watchPageChanges = async (config: WxRunningConfig, refreshEvent: (config: WxRunningConfig, fileEvents: string[]) => Promise<number>) => {
     const watcher = Deno.watchFs(config.workDir);
     let refreshCount = 0
     let refreshWorking = false
     let fileEventStack: string[] = new Array<string>()
 
+    log(`service ready, Press Ctrl-C to exit`)
     for await (const event of watcher) {
         // log(">>>> event", event);
 
@@ -433,61 +441,63 @@ export const mergeTargetClassNames = (config: WxRunningConfig) => (values: Await
 
 
 export const countTargetClassNames = (config: WxRunningConfig, outputFilePath: string) => (values: Awaited<string[] | PageClassNameCountMap>[]): Promise<number> => {
+    if (config == undefined) {
+        return Promise.reject(1)
+    }
     // const globalStyleNames = values[0] as string[]
     const pageClassNameCountMap = values[1] as PageClassNameCountMap
     const componentPageClassNameCountMap = values[2] as PageClassNameCountMap
-    // log("pageClassNameCountMap", pageClassNameCountMap)
-    // log("componentPageClassNameCountMap", componentPageClassNameCountMap)
-
     const totalPageMap = {...pageClassNameCountMap, ...componentPageClassNameCountMap}
-    // log("total pages:", Object.keys(totalPageMap))
 
-    const summaryMap: PageClassNameSummaryMap = {classNames: [], classNameCount: {}}
+    const summaryMap: PageClassNameSummaryMap = {classNames: [], classNameCount: {}, classNameRuleMap: {}}
     Object.keys(totalPageMap).forEach((page: string) => {
         summaryMap.classNames.push(...totalPageMap[page].keys)
         totalPageMap[page].keys.forEach((pageClassName: string) => {
-            if (summaryMap.classNameCount[pageClassName] == undefined) {
-                summaryMap.classNameCount[pageClassName] = {
-                    count: 0,
-                    pageMap: {}
-                }
+            let item = summaryMap.classNameCount[pageClassName]
+            if (item == undefined) {
+                item = {count: 0, pageMap: {}}
+                summaryMap.classNameCount[pageClassName] = item
             }
-            summaryMap.classNameCount[pageClassName].count += 1
-            if (summaryMap.classNameCount[pageClassName].pageMap[page] == undefined) {
-                summaryMap.classNameCount[pageClassName].pageMap[page] = 1
-            } else {
-                summaryMap.classNameCount[pageClassName].pageMap[page] += 1
-            }
+            // add class name occurs count
+            item.count += totalPageMap[page].map[pageClassName]
+            item.pageMap[page] = totalPageMap[page].map[pageClassName]
         })
     })
     summaryMap.classNames = summaryMap.classNames.compact().unique().sort(function (left: string, right: string) {
         return summaryMap.classNameCount[right].count - summaryMap.classNameCount[left].count
     })
-    // summaryMap.classNames.forEach((className: string) => {
-    //     log("className:", className, summaryMap.classNameCount[className].count)
-    // })
-    const totalCount = summaryMap.classNames.map(c => summaryMap.classNameCount[c].count).reduce(function (a, b) {
-        return a + b
-    }, 0)
+    const rules = config.tempData.ruleSetting?.rules || []
+    summaryMap.classNames.forEach((className: string) => {
+        rules.forEach((rule: AtomicStyleRule) => {
+            if (rule.syntax == className || rule.syntaxRegex?.test(className)) {
+                summaryMap.classNameRuleMap[className] = rule
+                return;
+            }
+        })
+    })
+    const totalClassUniqueCount = summaryMap.classNames.length
+    const totalClassOccursCount = summaryMap.classNames.map(c => summaryMap.classNameCount[c].count).reduce((a, b) => a + b, 0)
     const totalPageCount = Object.keys(totalPageMap).length
 
-    let content: string[] = []
-    content.push("# class name summary")
-    content.push(" ")
-    content.push(` - total count: ${summaryMap.classNames.length}`)
-    content.push(` - total occurs: ${totalCount}`)
+    const p1 = (r: number, t: number) => Math.round(10 * r / t) / 10
+
+    const content: string[] = []
+    content.push("# summary")
+    content.push(` - total **${totalPageCount}** pages, include **${Object.keys(componentPageClassNameCountMap).length}** component pages`)
+    content.push(` - total **${totalClassUniqueCount}** class names, **${totalClassOccursCount}** occurs`)
+    content.push(` - average **${p1(totalClassUniqueCount, totalPageCount)}** class names / page, **${p1(totalClassOccursCount, totalPageCount)}** occurs / page`)
 
     content.push(" ")
     content.push(" ")
     content.push("# class name list")
     content.push(" ")
-    content.push("| order | class name | page count | occurs count | usage | advice |")
-    content.push("| :---: | --- | ---: | ---: | ---: | :---: |")
+    content.push("| order | package | class name | page count | occurs count | page coverage | advice |")
+    content.push("| :---: | --- | --- | ---: | ---: | ---: | :---: |")
     summaryMap.classNames.forEach((className: string, index: number) => {
         const item = summaryMap.classNameCount[className]
         const itemPageCount = Object.keys(item.pageMap).length
         const usage = Math.round(itemPageCount * 10000 / totalPageCount) / 100
-        content.push(`| ${index + 1} | ${className} | ${itemPageCount} | ${item.count} | ${usage}% | ${usage > 50 ? 'global' : (usage > 20 ? 'module' : 'local')}  |`)
+        content.push(`| ${index + 1} | ${summaryMap.classNameRuleMap[className]?.package || 'undefined'} | ${className} | ${itemPageCount} | ${item.count} | ${usage}% | ${usage > 50 ? 'global' : (usage > 20 ? 'module' : 'local')}  |`)
     })
 
     content.push(" ")
@@ -500,14 +510,13 @@ export const countTargetClassNames = (config: WxRunningConfig, outputFilePath: s
         const itemMap = totalPageMap[pagePath]
         const itemCount = itemMap.keys.map(className => itemMap.map[className])
             .reduce((a, b) => a + b, 0)
-        content.push(`| ${index + 1} | ${pagePath} | ${itemMap.keys.length} | ${itemCount}  | ${Math.round(itemCount * 10 /itemMap.keys.length) / 10} |`)
+        content.push(`| ${index + 1} | ${pagePath} | ${itemMap.keys.length} | ${itemCount}  | ${Math.round(itemCount * 10 / itemMap.keys.length) / 10} |`)
     })
 
+    const reportContent = content.join("\n")
+    Deno.writeTextFileSync(outputFilePath, reportContent)
 
-    content = content.join("\n")
-    Deno.writeTextFileSync(outputFilePath, content)
-
-    log(Colors.green(`report saved ${content.length} chars to ${outputFilePath}`))
+    log(Colors.green(`report saved ${reportContent.length} chars to ${outputFilePath}`))
 
     return Promise.resolve(0)
 }
@@ -525,15 +534,13 @@ export const batchPromise = <T>(handler: (task: T, config: WxRunningConfig) => P
 export const batchCountPromise = <T>(handler: (task: T, config: WxRunningConfig) => Promise<PageClassNameCountMap>,
                                      config: WxRunningConfig) => (tasks: T[]): Promise<PageClassNameCountMap> => {
     return promiseLimit(handler.name, tasks.length,
-        (taskIndex: number): Promise<{ [index: string]: number }> => handler(tasks[taskIndex], config),
+        (taskIndex: number): Promise<PageClassNameCountMap> => handler(tasks[taskIndex], config),
         config.processOption.promiseLimit, config.debugOption.showTaskStep)
         .then((countMaps: PageClassNameCountMap[]) => {
             const countMap: PageClassNameCountMap = {}
-            countMaps.forEach((cm) => {
-                Object.keys(cm).forEach((key: string) => {
-                    countMap[key] = cm[key]
-                })
-            })
+            countMaps.forEach((cm) => Object.keys(cm).forEach((key: string) => {
+                countMap[key] = cm[key]
+            }))
             return countMap
         })
 }
@@ -669,7 +676,8 @@ export const generatePageInfo = async (config: WxRunningConfig, page: string): P
     return makePageInfo(page, componentsPages, config)
 }
 
-export const executeCommand = (config: WxRunningConfig, command: { [index: string]: (config: WxRunningConfig) => Promise<number> }): Promise<number> => {
+
+export const executeCommands = (command: { [index: string]: (config: WxRunningConfig) => void }) => (config: WxRunningConfig) => {
     // log("Deno.args", Deno.args)
     for (const arg of Deno.args) {
         if (command[arg] !== undefined) {
@@ -679,5 +687,4 @@ export const executeCommand = (config: WxRunningConfig, command: { [index: strin
     if (Deno.args.length == 1 && command["default"]) {
         return command["default"](config)
     }
-    return Promise.resolve(0)
 }
