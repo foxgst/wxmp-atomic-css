@@ -44,8 +44,8 @@
     "styleIndent": "    "
   },
   "dataOption": {
-    "themeFile": "data/themes.json",
-    "ruleFile": "data/rules.json"
+    "themeFile": "themes.json",
+    "ruleFile": "rules.json"
   },
   "debugOption": {
     "printConfigInfo": false,

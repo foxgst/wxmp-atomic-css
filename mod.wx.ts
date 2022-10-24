@@ -232,7 +232,7 @@ export const readRunningConfig = async (filePath: string, customConfig?: Optiona
     const trueFilePath = isAbsolutePath ? filePath : `${getScriptParentPath()}/${filePath}`
     const runningConfig = await readConfig(trueFilePath)
     const config: WxRunningConfig = Object.assign({}, runningConfig, customConfig || {})
-    config.configSource = getScriptParentPath(filePath)
+    config.configSource = getScriptParentPath(trueFilePath)
     return Promise.resolve(config)
 }
 
