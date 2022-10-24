@@ -1,4 +1,5 @@
 import {htmltok, TokenType} from "https://deno.land/x/htmltok@v0.0.3/private/htmltok.ts";
+import * as Colors from "https://deno.land/std@0.160.0/fmt/colors.ts";
 import * as css from "https://deno.land/x/css@0.3.0/mod.ts";
 import {Rule} from "https://deno.land/x/css@0.3.0/mod.ts";
 import {withoutAll} from "https://deno.land/std@0.160.0/collections/without_all.ts";
@@ -7,7 +8,6 @@ import {readAndInitRuleSetting, rulesToString, StyleRuleSetting} from "./data.ru
 import {readThemes, ThemeMap, themesToString} from "./data.theme.ts";
 import {OptionalRunningConfig, readConfig, StyleInfo, WxRunningConfig} from "./data.config.ts";
 import * as style from "./mod.style.ts";
-import * as Colors from "https://deno.land/std/fmt/colors.ts";
 
 export interface PageInfo {
     page: string,
