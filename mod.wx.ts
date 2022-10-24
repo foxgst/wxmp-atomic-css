@@ -7,7 +7,6 @@ import {
     arrayCount,
     getScriptParentPath,
     isAbsolutePath,
-    KeySortedArrayMap,
     log,
     promiseLimit,
     sleep,
@@ -434,7 +433,7 @@ export const mergeTargetClassNames = (config: WxRunningConfig) => (values: Await
 
 
 export const countTargetClassNames = (config: WxRunningConfig, outputFilePath: string) => (values: Awaited<string[] | PageClassNameCountMap>[]): Promise<number> => {
-    const globalStyleNames = values[0] as string[]
+    // const globalStyleNames = values[0] as string[]
     const pageClassNameCountMap = values[1] as PageClassNameCountMap
     const componentPageClassNameCountMap = values[2] as PageClassNameCountMap
     // log("pageClassNameCountMap", pageClassNameCountMap)
@@ -472,7 +471,7 @@ export const countTargetClassNames = (config: WxRunningConfig, outputFilePath: s
     }, 0)
     const totalPageCount = Object.keys(totalPageMap).length
 
-    const content: string[] = []
+    let content: string[] = []
     content.push("# class name summary")
     content.push(" ")
     content.push(` - total count: ${summaryMap.classNames.length}`)
@@ -493,21 +492,22 @@ export const countTargetClassNames = (config: WxRunningConfig, outputFilePath: s
 
     content.push(" ")
     content.push(" ")
-    content.push("# page list")
+    content.push("# page class name usage list")
     content.push(" ")
-    content.push("| order | page path | class unique count | class occurs count |")
-    content.push("| :---: | --- | ---: | ---: |")
+    content.push("| order | page path | class name unique count | class name occurs count | class name reuse rate |")
+    content.push("| :---: | --- | ---: | ---: | ---: |")
     Object.keys(totalPageMap).forEach((pagePath: string, index: number) => {
         const itemMap = totalPageMap[pagePath]
         const itemCount = itemMap.keys.map(className => itemMap.map[className])
             .reduce((a, b) => a + b, 0)
-        content.push(`| ${index + 1} | ${pagePath} | ${itemMap.keys.length} | ${itemCount} |`)
+        content.push(`| ${index + 1} | ${pagePath} | ${itemMap.keys.length} | ${itemCount}  | ${Math.round(itemCount * 10 /itemMap.keys.length) / 10} |`)
     })
 
 
-    Deno.writeTextFileSync(outputFilePath, content.join("\n"))
+    content = content.join("\n")
+    Deno.writeTextFileSync(outputFilePath, content)
 
-    log(Colors.green(`report saved to ${outputFilePath}`))
+    log(Colors.green(`report saved ${content.length} chars to ${outputFilePath}`))
 
     return Promise.resolve(0)
 }
@@ -672,7 +672,7 @@ export const generatePageInfo = async (config: WxRunningConfig, page: string): P
 export const executeCommand = (config: WxRunningConfig, command: { [index: string]: (config: WxRunningConfig) => Promise<number> }): Promise<number> => {
     // log("Deno.args", Deno.args)
     for (const arg of Deno.args) {
-        if (command[arg]) {
+        if (command[arg] !== undefined) {
             return command[arg](config)
         }
     }

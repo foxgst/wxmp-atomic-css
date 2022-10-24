@@ -3,7 +3,6 @@ import "https://deno.land/std@0.160.0/fs/mod.ts";
 import {log, printError, timing} from "./util.ts"
 import {OptionalRunningConfig, WxRunningConfig} from "./data.config.ts";
 import * as wx from "./mod.wx.ts";
-import {batchCountPromise, countComponentClassNames, countPageClassNames} from "./mod.wx.ts";
 
 const fullBuild = (config: WxRunningConfig): Promise<number> => {
     log("[task] start auto generation after started");
@@ -61,7 +60,7 @@ const partiallyUpdate = (config: WxRunningConfig, fileEvents: string[]): Promise
         .then((config: WxRunningConfig) =>
             wx.executeCommand(config, {
                 "count": count,
-                "default": fullBuild(config).then(() => wx.watchMiniProgramPageChange(config, partiallyUpdate))
+                "default": () => fullBuild(config).then(() => wx.watchMiniProgramPageChange(config, partiallyUpdate))
             }))
         .catch((e: unknown) => log(e))
 })()
