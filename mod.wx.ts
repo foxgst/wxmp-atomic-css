@@ -2,7 +2,7 @@ import {htmltok, TokenType} from "https://deno.land/x/htmltok@v0.0.3/private/htm
 import * as css from "https://deno.land/x/css@0.3.0/mod.ts";
 import {Rule} from "https://deno.land/x/css@0.3.0/mod.ts";
 import {withoutAll} from "https://deno.land/std@0.160.0/collections/without_all.ts";
-import {log, promiseLimit, sleep, Timing} from "./util.ts";
+import {getScriptParentPath, isAbsolutePath, log, promiseLimit, sleep, Timing} from "./util.ts";
 import {readAndInitRuleSetting, rulesToString, StyleRuleSetting} from "./data.rule.ts";
 import {readThemes, ThemeMap, themesToString} from "./data.theme.ts";
 import {OptionalRunningConfig, readConfig, StyleInfo, WxRunningConfig} from "./data.config.ts";
@@ -227,11 +227,12 @@ export const parsePageClassNames = (pagePath: string, config: WxRunningConfig): 
     return Promise.resolve(missingStyleNames)
 }
 
-export const readRunningConfig = async (configSource: string, configFilePath: string, customConfig?: OptionalRunningConfig): Promise<WxRunningConfig> => {
-    const runningConfig = await readConfig(`${configSource}/${configFilePath}`)
-    // import runningConfig from "data/config.json" assert {  type: "json" };
+export const readRunningConfig = async (filePath: string, customConfig?: OptionalRunningConfig): Promise<WxRunningConfig> => {
+    const isAbsolutePath = filePath.startsWith("http") || filePath.startsWith("/") || filePath.includes(":");
+    const trueFilePath = isAbsolutePath ? filePath : `${getScriptParentPath()}/${filePath}`
+    const runningConfig = await readConfig(trueFilePath)
     const config: WxRunningConfig = Object.assign({}, runningConfig, customConfig || {})
-    config.configSource = configSource
+    config.configSource = getScriptParentPath(filePath)
     return Promise.resolve(config)
 }
 
@@ -312,7 +313,11 @@ export const watchMiniProgramPageChange = async (config: WxRunningConfig, refres
 
 export const getRuleSetting = async (config: WxRunningConfig): Promise<StyleRuleSetting> => {
     if (config.tempData.ruleSetting == undefined) {
-        config.tempData.ruleSetting = await readAndInitRuleSetting(`${config.configSource}/${config.dataOption.ruleFile}`)
+        let filePath = config.dataOption.ruleFile
+        if (!isAbsolutePath(filePath)) {
+            filePath = `${config.configSource}/${filePath}`
+        }
+        config.tempData.ruleSetting = await readAndInitRuleSetting(filePath)
         log(`[task] read ${Colors.cyan(config.tempData.ruleSetting.rules.length.toString())} rules`)
     }
     return config.tempData.ruleSetting;
@@ -321,7 +326,11 @@ export const getRuleSetting = async (config: WxRunningConfig): Promise<StyleRule
 
 export const getThemeMap = async (config: WxRunningConfig): Promise<ThemeMap> => {
     if (config.tempData.themeMap == undefined) {
-        config.tempData.themeMap = await readThemes(`${config.configSource}/${config.dataOption.themeFile}`)
+        let filePath = config.dataOption.themeFile
+        if (!isAbsolutePath(filePath)) {
+            filePath = `${config.configSource}/${filePath}`
+        }
+        config.tempData.themeMap = await readThemes(filePath)
         log(`[task] read ${Colors.cyan(Object.keys(config.tempData.themeMap).length.toString())} themes`)
     }
     return config.tempData.themeMap;

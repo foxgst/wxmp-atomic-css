@@ -1,6 +1,6 @@
 import "https://deno.land/x/arrays@v1.0.21/mod.ts";
 import "https://deno.land/std@0.160.0/fs/mod.ts";
-import {printError, log, timing} from "./util.ts"
+import {log, printError, timing} from "./util.ts"
 import {OptionalRunningConfig, WxRunningConfig} from "./data.config.ts";
 import * as wx from "./mod.wx.ts";
 
@@ -28,18 +28,6 @@ const partiallyUpdate = (config: WxRunningConfig, fileEvents: string[]): Promise
         .catch(printError(time))
 }
 
-const getScriptPath = () => {
-    const isWindows = Deno.build.os === "windows";
-    let scriptPath = new URL(import.meta.url).toString()
-    const isRemote = scriptPath.startsWith("http")
-    if (isRemote) {
-        return scriptPath.substring(0, scriptPath.lastIndexOf("/"))
-    } else {
-        scriptPath = scriptPath.replace("file:///", "")
-        return scriptPath.substring(0, scriptPath.lastIndexOf("/")).replaceAll("/", isWindows ? "\\" : "/")
-    }
-};
-
 (function () {
     log("==========================================================");
     log("   wxmp-atomic-css: wechat mini program atomic css kit");
@@ -51,7 +39,7 @@ const getScriptPath = () => {
         Deno.exit();
     });
 
-    wx.readRunningConfig(getScriptPath(), "data/config.json", {
+    wx.readRunningConfig("data/config.json", {
         // debugOption: {printConfigInfo: true, printThemes: true, printRule: true},
         processOption: {promiseLimit: 1}
     } as OptionalRunningConfig)

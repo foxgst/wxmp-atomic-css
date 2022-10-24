@@ -118,3 +118,22 @@ export const readDataFile = <Type>(filePath: string): Promise<Type> => {
 export type PropertyOptional<Type> = {
     [Property in keyof Type]-?: Type[Property];
 };
+
+export const isAbsolutePath = (filePath: string) : boolean => {
+    return filePath.startsWith("http") || filePath.startsWith("/") || filePath.includes(":")
+}
+
+export const getScriptParentPath = (scriptPath: string = undefined) => {
+    if (scriptPath == undefined) {
+        scriptPath = new URL(import.meta.url).toString()
+    }
+    if (scriptPath.startsWith("http")) {
+        return scriptPath.substring(0, scriptPath.lastIndexOf("/"))
+    }
+    if (scriptPath.startsWith("/") || scriptPath.includes(":")) {
+        const isWindows = Deno.build.os === "windows";
+        scriptPath = scriptPath.replace("file:///", "")
+        return scriptPath.substring(0, scriptPath.lastIndexOf("/")).replaceAll("/", isWindows ? "\\" : "/")
+    }
+    return "."
+};
