@@ -133,6 +133,9 @@ and add some code with class names to the wxml file
     "css": ".wxss"
   },
   "cssOption": {
+    "varPrefix": "mp-",
+    "minify": false,
+    "palette": "ant-design",
     "rootElementName": "page",
     "componentGlobalCss": "addGlobalClass:\\s*true",
     "one": {
@@ -149,8 +152,8 @@ and add some code with class names to the wxml file
     "styleIndent": "    "
   },
   "dataOption": {
-    "themeFile": "data/themes.json",
-    "ruleFile": "data/rules.json"
+    "themeFile": "themes.json",
+    "ruleFile": "rules.json"
   },
   "debugOption": {
     "printConfigInfo": false,
@@ -243,55 +246,37 @@ partially content
 
 ```json
 {
-  "primary": [
-    "70,134,235"
-  ],
-  "black": [
-    "0,0,0"
-  ],
-  "white": [
-    "255,255,255"
-  ],
-  "gray": [
-    "255,255,255",
-    "250,250,250",
-    "245,245,245",
-    "240,240,240",
-    "217,217,217",
-    "191,191,191",
-    "140,140,140",
-    "89,89,89",
-    "67,67,67",
-    "38,38,38",
-    "31,31,31",
-    "20,20,20",
-    "0,0,0"
-  ],
-  "red": [
-    "255,241,240",
-    "255,204,199",
-    "255,163,158",
-    "255,120,117",
-    "255,77,79",
-    "245,34,45",
-    "207,19,34",
-    "168,7,26",
-    "130,0,20",
-    "92,0,17"
-  ],
-  "orange": [ ],
-  "yellow": [ ],
-  "green": [ ],
-  "blue": [ ],
-  "purple": [ ],
-  "magenta": [ ],
-  "cyan": [ ],
-  "lime": [ ],
-  "gold": [ ],
-  "volcano": [ ]
+  "primary": "#4686eb",
+  "black":  "#000000",
+  "white": "#ffffff",
+  "palette": {
+    "ant-design": {
+      "gray": ["#ffffff","#fafafa","#f5f5f5","#f0f0f0","#d9d9d9","#bfbfbf","#8c8c8c","#595959","#434343","#262626","#1f1f1f","#141414","#000000"],
+      "red": ["#fff1f0","#ffccc7","#ffa39e","#ff7875","#ff4d4f","#f5222d","#cf1322","#a8071a","#820014","#5c0011" ],
+      "orange": ["#fff7e6","#ffe7ba","#ffd591","#ffc069","#ffa940","#fa8c16","#d46b08","#ad4e00","#873800","#612500"],
+      "yellow": ["#feffe6","#ffffb8","#fffb8f","#fff566","#ffec3d","#fadb14","#d4b106","#ad8b00","#876800","#614700"],
+      "green": ["#f6ffed","#d9f7be","#b7eb8f","#95de64","#73d13d","#52c41a","#389e0d","#237804","#135200","#092b00"],
+      "blue": ["#e6f7ff","#bae7ff","#91d5ff","#69c0ff","#40a9ff","#1890ff","#096dd9","#0050b3","#003a8c","#002766"],
+      "purple": ["#f9f0ff","#efdbff","#d3adf7","#b37feb","#9254de","#722ed1","#531dab","#391085","#22075e","#120338"],
+      "magenta": ["#fff0f6","#ffd6e7","#ffadd2","#ff85c0","#f759ab","#eb2f96","#c41d7f","#9e1068","#780650","#520339"],
+      "cyan": ["#e6fffb","#b5f5ec","#87e8de","#5cdbd3","#36cfc9","#13c2c2","#08979c","#006d75","#00474f","#002329"],
+      "lime": ["#fcffe6","#f4ffb8","#eaff8f","#d3f261","#bae637","#a0d911","#7cb305","#5b8c00","#3f6600","#254000"],
+      "gold": ["#fffbe6","#fff1b8","#ffe58f","#ffd666","#ffc53d","#faad14","#d48806","#ad6800","#874d00","#613400"],
+      "volcano": ["#fff2e8","#ffd8bf","#ffbb96","#ff9c6e","#ff7a45","#fa541c","#d4380d","#ad2102","#871400","#610b00"]
+    },
+    "t-design": {
+      "gray": ["#f3f3f3","#eeeeee","#e7e7e7","#dcdcdc","#c5c5c5","#a6a6a6","#8b8b8b","#777777","#5e5e5e","#4b4b4b","#383838","#2c2c2c","#242424","#181818"],
+      "red": ["#fdecee","#f9d7d9","#f8b9be","#f78d94","#f36d78","#e34d59","#c9353f","#b11f26","#951114","#680506"],
+      "orange": ["#fef3e6","#f9e0c7","#f7c797","#f2995f","#ed7b2f","#d35a21","#ba431b","#9e3610","#842b0b","#5a1907"],
+      "yellow": ["#fff8b8","#ffe478","#fbca25","#ebb105","#d29c00","#ba8700","#a37200","#8c5f00","#754c00","#5e3a00"],
+      "green": ["#e8f8f2","#bcebdc","#85dbbe","#48c79c","#00a870","#078d5c","#067945","#056334","#044f2a","#033017"],
+      "blue": ["#ecf2fe","#d4e3fc","#bbd3fb","#96bbf8","#699ef5","#4787f0","#266fe8","#0052d9","#0034b5","#001f97"],
+      "purple": ["#f3e0ff","#e6c4ff","#d8abff","#c68cff","#ae78f0","#9963d8","#834ec2","#6d3bac","#572796","#421381"],
+      "pink": ["#ffe9ff","#ffd1fc","#ffb2f2","#ff8fe1","#ff66cc","#ed49b4","#d42c9d","#bc0088","#9b006b","#7b0052"],
+      "cyan":  ["#d6f7ff","#b2ecff","#85daff","#5cc5fc","#31adfb","#0594fa","#007edf","#0068c0","#00549e","#00417d"]
+    }
+  }
 }
-
-
 ```
 
 
@@ -305,29 +290,31 @@ partially content
 
 ## rule syntax
 
-1) package = spacing.padding.core, syntax = [ `safe-bottom` ]
-2) package = spacing.padding.ext, syntax = [ `p-[U]`,`px-[U]`,`py-[U]`,`pt-[U]`,`pb-[U]`,`pl-[U]`,`pr-[U]` ]
-3) package = spacing.margin.ext, syntax = [ `m-[U]`,`mx-[U]`,`my-[U]`,`mt-[U]`,`mb-[U]`,`ml-[U]`,`mr-[U]` ]
-4) package = sizing.size.ext, syntax = [ `wh-screen`,`wh-full`,`wh-[U]` ]
-5) package = sizing.width.ext, syntax = [ `w-full`,`w-[U]`,`mw-[U]`,`xw-[U]` ]
-6) package = sizing.height.ext, syntax = [ `h-full`,`h-[U]`,`mh-[U]`,`xh-[U]` ]
-7) package = size.gap.ext, syntax = [ `gap-[U]`,`gap-x-[U]`,`gap-y-[U]` ]
-8) package = layout.float.core, syntax = [ `pos-abs`,`pos-rel`,`pos-fix`,`pos-sticky` ]
-9) package = layout.float.ext, syntax = [ `pos-tl-[U]`,`pos-tr-[U]`,`pos-bl-[U]`,`pos-br-[U]`,`top-[U]`,`bottom-[U]`,`left-[U]`,`right-[U]`,`z-[U]` ]
-10) package = layout.flex.core, syntax = [ `flex-row`,`flex-col`,`flex-row-r`,`flex-col-r`,`flex-wrap`,`flex-cc`,`flex-lc`,`flex-rc`,`ai-start`,`ai-center`,`ai-end`,`jc-start`,`jc-center`,`jc-end`,`jc-between`,`jc-around`,`jc-evenly` ]
-11) package = layout.flex.ext, syntax = [ `c[N]`,`order-[N]` ]
-12) package = layout.grid.ext, syntax = [ `grid-[N]c`,`col-span-full`,`col-span-[N]`,`col-start-[N]`,`col-end-[N]`,`grid-[N]r`,`row-span-full`,`row-span-[N]`,`row-start-[N]`,`row-end-[N]` ]
-13) package = layout.display.ext, syntax = [ `in-block`,`block`,`inline` ]
-14) package = layout.overflow.ext, syntax = [ `overflow-auto`,`overflow-hidden` ]
-15) package = text.size.ext, syntax = [ `text-[U]` ]
-16) package = text.color.ext, syntax = [ `text-[C]-[N]-[A]`,`text-[C]-a[A]`,`text-[C]-[N]`,`text-[C]` ]
-17) package = text.effect.core, syntax = [ `text-left`,`text-center`,`text-right`,`text-break`,`text-bold`,`text-line` ]
-18) package = text.effect.ext, syntax = [ `text-normal`,`text-line-p[N]`,`text-space-[U]`,`text-ellipsis`,`text-uppercase` ]
-19) package = bg.color.ext, syntax = [ `bg-[C]-[N]-a[A]`,`bg-[C]-[N]`,`bg-[C]-a[A]`,`bg-[C]` ]
-20) package = effect.round.core, syntax = [ `round` ]
-21) package = effect.round.ext, syntax = [ `round-[U]`,`round-top-[U]`,`round-bottom-[U]`,`round-left-[U]`,`round-right-[U]`,`round-tl-[U]`,`round-tr-[U]`,`round-bl-[U]`,`round-br-[U]` ]
-22) package = effect.border.core, syntax = [ `border`,`border-left`,`border-right`,`border-top`,`border-bottom`,`border-transparent` ]
-23) package = effect.border.ext, syntax = [ `border-dashed`,`border-[U]`,`border-[C]-[N]-a[A]`,`border-[C]-[N]`,`border-[C]` ]
-24) package = effect.shadow.ext, syntax = [ `shadow`,`shadow-1`,`shadow-2`,`shadow-3`,`shadow-4`,`shadow-5` ]
-25) package = effect.opacity.ext, syntax = [ `opacity-[N]` ]
-26) package = transform.rotate.ext, syntax = [ `rotate-[N]` ]
+| order | package | syntax list |
+| :---: | --------- | --------- |
+|  1 |  spacing.padding.core |       `safe-bottom` |
+|  2 |  spacing.padding.ext |        `p-[U]`   `px-[U]`   `py-[U]`   `pt-[U]`   `pb-[U]`   `pl-[U]`   `pr-[U]` |
+|  3 |  spacing.margin.ext |         `m-[U]`   `mx-[U]`   `my-[U]`   `mt-[U]`   `mb-[U]`   `ml-[U]`   `mr-[U]` |
+|  4 |  sizing.size.ext |            `wh-screen`   `wh-full`   `wh-[U]` |
+|  5 |  sizing.width.ext |           `w-full`   `w-[U]`   `mw-[U]`   `xw-[U]` |
+|  6 |  sizing.height.ext |          `h-full`   `h-[U]`   `mh-[U]`   `xh-[U]` |
+|  7 |  size.gap.ext |               `gap-[U]`   `gap-x-[U]`   `gap-y-[U]` |
+|  8 |  layout.float.core |          `pos-abs`   `pos-rel`   `pos-fix`   `pos-sticky` |
+|  9 |  layout.float.ext |           `pos-tl-[U]`   `pos-tr-[U]`   `pos-bl-[U]`   `pos-br-[U]`   `top-[U]`   `bottom-[U]`   `left-[U]`   `right-[U]`   `z-[U]` |
+| 10 |  layout.flex.core |           `flex-row`   `flex-col`   `flex-row-r`   `flex-col-r`   `flex-wrap`   `flex-cc`   `flex-lc`   `flex-rc`   `ai-start`   `ai-center`   `ai-end`   `jc-start`   `jc-center`   `jc-end`   `jc-between`   `jc-around`   `jc-evenly` |
+| 11 |  layout.flex.ext |            `c[N]`   `order-[N]` |
+| 12 |  layout.grid.ext |            `grid-[N]c`   `col-span-full`   `col-span-[N]`   `col-start-[N]`   `col-end-[N]`   `grid-[N]r`   `row-span-full`   `row-span-[N]`   `row-start-[N]`   `row-end-[N]` |
+| 13 |  layout.display.ext |         `in-block`   `block`   `inline` |
+| 14 |  layout.overflow.ext |        `overflow-auto`   `overflow-hidden` |
+| 15 |  text.size.ext |              `text-[U]` |
+| 16 |  text.color.ext |             `text-[C]-[N]-[A]`   `text-[C]-a[A]`   `text-[C]-[N]`   `text-[C]` |
+| 17 |  text.effect.core |           `text-left`   `text-center`   `text-right`   `text-break`   `text-bold`   `text-line` |
+| 18 |  text.effect.ext |            `text-normal`   `text-line-p[N]`   `text-space-[U]`   `text-ellipsis`   `text-uppercase` |
+| 19 |  bg.color.ext |               `bg-[C]-[N]-a[A]`   `bg-[C]-[N]`   `bg-[C]-a[A]`   `bg-[C]` |
+| 20 |  effect.round.core |          `round` |
+| 21 |  effect.round.ext |           `round-[U]`   `round-top-[U]`   `round-bottom-[U]`   `round-left-[U]`   `round-right-[U]`   `round-tl-[U]`   `round-tr-[U]`   `round-bl-[U]`   `round-br-[U]` |
+| 22 |  effect.border.core |         `border`   `border-left`   `border-right`   `border-top`   `border-bottom`   `border-transparent` |
+| 23 |  effect.border.ext |          `border-dashed`   `border-[U]`   `border-[C]-[N]-a[A]`   `border-[C]-[N]`   `border-[C]` |
+| 24 |  effect.shadow.ext |          `shadow`   `shadow-1`   `shadow-2`   `shadow-3`   `shadow-4`   `shadow-5` |
+| 25 |  effect.opacity.ext |         `opacity-[N]` |
+| 26 |  transform.rotate.ext |       `rotate-[N]` |
