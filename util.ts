@@ -33,6 +33,15 @@ export type KeySortedArrayMap<Type> = {
     map: { [key: string]: Type[] };
 };
 
+
+/**
+ * count map with sorted keys
+ */
+export type CountArrayMap<Type> = {
+    keys: string[];
+    map: { [key: string]: number };
+};
+
 /**
  * group array by keys, return key sorted map
  * @param elementArray element array
@@ -46,6 +55,22 @@ export const arrayMap = <Type>(elementArray: Type[], keyFunction: (a: Type) => s
             groupMap.map[key] = []
         }
         groupMap.map[key].push(element)
+        return groupMap
+    }, {keys: [], map: {}});
+
+/**
+ * count array by keys, return key sorted map
+ * @param elementArray element array
+ * @param keyFunction key generator function
+ */
+export const arrayCount = <Type>(elementArray: Type[], keyFunction: (a: Type) => string): CountArrayMap<Type> =>
+    elementArray.reduce((groupMap: KeySortedArrayMap<Type>, element: Type) => {
+        const key = keyFunction(element)
+        if (groupMap.keys.indexOf(key) == -1) {
+            groupMap.keys.push(key)
+            groupMap.map[key] = 0
+        }
+        groupMap.map[key]++
         return groupMap
     }, {keys: [], map: {}});
 

@@ -291,31 +291,31 @@ partially content
 
 ## rule syntax
 
-| order | package | syntax list |
-| :---: | --------- | --------- |
-|  1 |  spacing.padding.core |       `safe-bottom` |
-|  2 |  spacing.padding.ext |        `p-[U]`   `px-[U]`   `py-[U]`   `pt-[U]`   `pb-[U]`   `pl-[U]`   `pr-[U]` |
-|  3 |  spacing.margin.ext |         `m-[U]`   `mx-[U]`   `my-[U]`   `mt-[U]`   `mb-[U]`   `ml-[U]`   `mr-[U]` |
-|  4 |  sizing.size.ext |            `wh-screen`   `wh-full`   `wh-[U]` |
-|  5 |  sizing.width.ext |           `w-full`   `w-[U]`   `mw-[U]`   `xw-[U]` |
-|  6 |  sizing.height.ext |          `h-full`   `h-[U]`   `mh-[U]`   `xh-[U]` |
-|  7 |  size.gap.ext |               `gap-[U]`   `gap-x-[U]`   `gap-y-[U]` |
-|  8 |  layout.float.core |          `pos-abs`   `pos-rel`   `pos-fix`   `pos-sticky` |
-|  9 |  layout.float.ext |           `pos-tl-[U]`   `pos-tr-[U]`   `pos-bl-[U]`   `pos-br-[U]`   `top-[U]`   `bottom-[U]`   `left-[U]`   `right-[U]`   `z-[U]` |
-| 10 |  layout.flex.core |           `flex-row`   `flex-col`   `flex-row-r`   `flex-col-r`   `flex-wrap`   `flex-cc`   `flex-lc`   `flex-rc`   `ai-start`   `ai-center`   `ai-end`   `jc-start`   `jc-center`   `jc-end`   `jc-between`   `jc-around`   `jc-evenly` |
-| 11 |  layout.flex.ext |            `c[N]`   `order-[N]` |
-| 12 |  layout.grid.ext |            `grid-[N]c`   `col-span-full`   `col-span-[N]`   `col-start-[N]`   `col-end-[N]`   `grid-[N]r`   `row-span-full`   `row-span-[N]`   `row-start-[N]`   `row-end-[N]` |
-| 13 |  layout.display.ext |         `in-block`   `block`   `inline` |
-| 14 |  layout.overflow.ext |        `overflow-auto`   `overflow-hidden` |
-| 15 |  text.size.ext |              `text-[U]` |
-| 16 |  text.color.ext |             `text-[C]-[N]-[A]`   `text-[C]-a[A]`   `text-[C]-[N]`   `text-[C]` |
-| 17 |  text.effect.core |           `text-left`   `text-center`   `text-right`   `text-break`   `text-bold`   `text-line` |
-| 18 |  text.effect.ext |            `text-normal`   `text-line-p[N]`   `text-space-[U]`   `text-ellipsis`   `text-uppercase` |
-| 19 |  bg.color.ext |               `bg-[C]-[N]-a[A]`   `bg-[C]-[N]`   `bg-[C]-a[A]`   `bg-[C]` |
-| 20 |  effect.round.core |          `round` |
-| 21 |  effect.round.ext |           `round-[U]`   `round-top-[U]`   `round-bottom-[U]`   `round-left-[U]`   `round-right-[U]`   `round-tl-[U]`   `round-tr-[U]`   `round-bl-[U]`   `round-br-[U]` |
-| 22 |  effect.border.core |         `border`   `border-left`   `border-right`   `border-top`   `border-bottom`   `border-transparent` |
-| 23 |  effect.border.ext |          `border-dashed`   `border-[U]`   `border-[C]-[N]-a[A]`   `border-[C]-[N]`   `border-[C]` |
-| 24 |  effect.shadow.ext |          `shadow`   `shadow-1`   `shadow-2`   `shadow-3`   `shadow-4`   `shadow-5` |
-| 25 |  effect.opacity.ext |         `opacity-[N]` |
-| 26 |  transform.rotate.ext |       `rotate-[N]` |
+| order | package              | syntax list                                                                                                                                                                                                                    |
+|:-----:|----------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|   1   | spacing.padding.core | `safe-bottom`                                                                                                                                                                                                                  |
+|   2   | spacing.padding.ext  | `p-[U]`   `px-[U]`   `py-[U]`   `pt-[U]`   `pb-[U]`   `pl-[U]`   `pr-[U]`                                                                                                                                                      |
+|   3   | spacing.margin.ext   | `m-[U]`   `mx-[U]`   `my-[U]`   `mt-[U]`   `mb-[U]`   `ml-[U]`   `mr-[U]`                                                                                                                                                      |
+|   4   | sizing.size.ext      | `wh-screen`   `wh-full`   `wh-[U]`                                                                                                                                                                                             |
+|   5   | sizing.width.ext     | `w-full`   `w-[U]`   `mw-[U]`   `xw-[U]`                                                                                                                                                                                       |
+|   6   | sizing.height.ext    | `h-full`   `h-[U]`   `mh-[U]`   `xh-[U]`                                                                                                                                                                                       |
+|   7   | size.gap.ext         | `gap-[U]`   `gap-x-[U]`   `gap-y-[U]`                                                                                                                                                                                          |
+|   8   | layout.float.core    | `pos-abs`   `pos-rel`   `pos-fix`   `pos-sticky`                                                                                                                                                                               |
+|   9   | layout.float.ext     | `pos-tl-[U]`   `pos-tr-[U]`   `pos-bl-[U]`   `pos-br-[U]`   `top-[U]`   `bottom-[U]`   `left-[U]`   `right-[U]`   `z-[U]`                                                                                                      |
+|  10   | layout.flex.core     | `flex-row`   `flex-col`   `flex-row-r`   `flex-col-r`   `flex-wrap`   `flex-cc`   `flex-lc`   `flex-rc`   `ai-start`   `ai-center`   `ai-end`   `jc-start`   `jc-center`   `jc-end`   `jc-between`   `jc-around`   `jc-evenly` |
+|  11   | layout.flex.ext      | `c[N]`   `order-[N]`                                                                                                                                                                                                           |
+|  12   | layout.grid.ext      | `grid-[N]c`   `col-span-full`   `col-span-[N]`   `col-start-[N]`   `col-end-[N]`   `grid-[N]r`   `row-span-full`   `row-span-[N]`   `row-start-[N]`   `row-end-[N]`                                                            |
+|  13   | layout.display.ext   | `in-block`   `block`   `inline`                                                                                                                                                                                                |
+|  14   | layout.overflow.ext  | `overflow-auto`   `overflow-hidden`                                                                                                                                                                                            |
+|  15   | text.size.ext        | `text-[U]`                                                                                                                                                                                                                     |
+|  16   | text.color.ext       | `text-[C]-[N]-[A]`   `text-[C]-a[A]`   `text-[C]-[N]`   `text-[C]`                                                                                                                                                             |
+|  17   | text.effect.core     | `text-left`   `text-center`   `text-right`   `text-break`   `text-bold`   `text-line`                                                                                                                                          |
+|  18   | text.effect.ext      | `text-normal`   `text-line-p[N]`   `text-space-[U]`   `text-ellipsis`   `text-uppercase`                                                                                                                                       |
+|  19   | bg.color.ext         | `bg-[C]-[N]-a[A]`   `bg-[C]-[N]`   `bg-[C]-a[A]`   `bg-[C]`                                                                                                                                                                    |
+|  20   | effect.round.core    | `round`                                                                                                                                                                                                                        |
+|  21   | effect.round.ext     | `round-[U]`   `round-top-[U]`   `round-bottom-[U]`   `round-left-[U]`   `round-right-[U]`   `round-tl-[U]`   `round-tr-[U]`   `round-bl-[U]`   `round-br-[U]`                                                                  |
+|  22   | effect.border.core   | `border`   `border-left`   `border-right`   `border-top`   `border-bottom`   `border-transparent`                                                                                                                              |
+|  23   | effect.border.ext    | `border-dashed`   `border-[U]`   `border-[C]-[N]-a[A]`   `border-[C]-[N]`   `border-[C]`                                                                                                                                       |
+|  24   | effect.shadow.ext    | `shadow`   `shadow-1`   `shadow-2`   `shadow-3`   `shadow-4`   `shadow-5`                                                                                                                                                      |
+|  25   | effect.opacity.ext   | `opacity-[N]`                                                                                                                                                                                                                  |
+|  26   | transform.rotate.ext | `rotate-[N]`                                                                                                                                                                                                                   |
