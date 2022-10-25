@@ -468,7 +468,7 @@
   {
     "package": "text.color.ext",
     "syntax": "text-[C]-a[A]",
-    "expr": "color: var(--color-[C]-1-[A]);"
+    "expr": "color: var(--color-[C]-[A]);"
   },
   {
     "package": "text.color.ext",
@@ -478,7 +478,7 @@
   {
     "package": "text.color.ext",
     "syntax": "text-[C]",
-    "expr": "color: var(--color-[C]-1);"
+    "expr": "color: var(--color-[C]);"
   },
   {
     "package": "text.effect.core",
@@ -548,12 +548,12 @@
   {
     "package": "bg.color.ext",
     "syntax": "bg-[C]-a[A]",
-    "expr": "background-color: var(--color-[C]-1-[A]);"
+    "expr": "background-color: var(--color-[C]-[A]);"
   },
   {
     "package": "bg.color.ext",
     "syntax": "bg-[C]",
-    "expr": "background-color: var(--color-[C]-1);"
+    "expr": "background-color: var(--color-[C]);"
   },
   {
     "package": "effect.round.core",
