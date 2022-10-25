@@ -77,7 +77,7 @@ const searchRulesByExpr = (expression: string, ruleSetting: StyleRuleSetting): A
 }
 
 
-export const makeCssForExpr = (expression: string, ruleSetting: StyleRuleSetting, cssOption: CssOption): StyleInfo => {
+export const makeCssForExpr = (expression: string, ruleSetting: StyleRuleSetting, cssOption: CssOption, colorAliasMap: {[index:string]: string}): StyleInfo => {
     const rules = searchRulesByExpr(expression, ruleSetting)
     if (rules == undefined || rules.length == 0) {
         return {units: [], colors: [], styles: [], warnings: [expression], classNames: []}
@@ -121,7 +121,7 @@ export const makeCssForExpr = (expression: string, ruleSetting: StyleRuleSetting
         }
         if (classRule.rule.compose) {
             classRule.rule.compose.forEach((command: string) => {
-                const newClassExpr = wrapPara(command, para)
+                const newClassExpr = wrapPara(command, para, colorAliasMap, cssOption.minify)
                 const newRules = searchRulesByExpr(newClassExpr, ruleSetting)
                 newRules?.forEach((rule: AtomicStyleRule) => {
                     units.push(...(rule?.units || []))
@@ -133,7 +133,7 @@ export const makeCssForExpr = (expression: string, ruleSetting: StyleRuleSetting
         if (classRule.rule.expr) {
             units.push(...(classRule.rule?.units || []))
             colors.push(...(classRule.rule?.colors || []))
-            const style = wrapPara(classRule.rule.expr, para)
+            const style = wrapPara(classRule.rule.expr, para, colorAliasMap, cssOption.minify)
             styles.push(`${cssOption.minify ? "" : "    "}${style}${cssOption.minify ? "" : "\n"}`)
         }
         if (classRule.rule.dependencies) {
@@ -149,7 +149,7 @@ export const makeCssForExpr = (expression: string, ruleSetting: StyleRuleSetting
     return {units: units.compact().unique(), colors: colors.compact().unique(), styles, warnings: [], classNames}
 }
 
-const wrapPara = (expression: string, para?: PropertyValueParameter | undefined): string => {
+const wrapPara = (expression: string, para?: PropertyValueParameter | undefined, colorAliasMap: { [index: string]: string }, minify: boolean): string => {
     if (expression == "" || para == undefined) {
         return expression || ""
     }
@@ -160,7 +160,8 @@ const wrapPara = (expression: string, para?: PropertyValueParameter | undefined)
         expression = expression.replace(/\[N]/g, para.number)
     }
     if (para.color != undefined) {
-        expression = expression.replace(/\[C]/g, para.color)
+        const colorName = minify ? colorAliasMap[para.color] : para.color
+        expression = expression.replace(/\[C]/g, colorName)
     }
     if (para.alpha != undefined) {
         expression = expression.replace(/\[A]/g, para.alpha)
@@ -189,7 +190,7 @@ export const generateVars = (units: string[], colors: string[], cssOption: CssOp
     const vars: string[] = []
     vars.push(`${cssOption.rootElementName}${cssOption.minify ? "" : " "}{`)
     units.forEach((unit: string) => {
-        vars.push(`${cssOption.minify ? "" : cssOption.styleIndent}--${cssOption.varPrefix}unit-${unit}:${cssOption.minify ? "" : " "}${calcUnitValue(unit, cssOption.one)};`)
+        vars.push(`${cssOption.minify ? "" : cssOption.styleIndent}--${cssOption.varPrefix}${cssOption.varUnitPrefix}${unit}:${cssOption.minify ? "" : " "}${calcUnitValue(unit, cssOption.one)};`)
     })
 
     colors.forEach((color: string) => {
@@ -199,7 +200,8 @@ export const generateVars = (units: string[], colors: string[], cssOption: CssOp
         }
 
         const {theme, order, alpha} = colorInfo
-        vars.push(`${cssOption.minify ? "" : cssOption.styleIndent}--${cssOption.varPrefix}color-${color}:${cssOption.minify ? "" : " "}${generateColorVar(cssOption.palette, theme, order, alpha, themeMap)};`)
+        const colorName = cssOption.minify ? color.replace(theme, themeMap.colorAliasMap[theme]) : color
+        vars.push(`${cssOption.minify ? "" : cssOption.styleIndent}--${cssOption.varPrefix}${cssOption.varColorPrefix}${colorName}:${cssOption.minify ? "" : " "}${generateColorVar(cssOption.palette, theme, order, alpha, themeMap)};`)
     })
 
 
@@ -292,10 +294,11 @@ const appendAlpha = (color: string, alpha: number) => `${color}${Math.round(alph
  * @param ruleSetting rules
  * @param cssOption css option
  * @param showStyleTaskResult flag if show style task result
+ * @param colorAliasMap
  */
-export const generateStyleContents = (missingClassNames: string[], ruleSetting: StyleRuleSetting, cssOption: CssOption, showStyleTaskResult: boolean): StyleInfo[] => {
+export const generateStyleContents = (missingClassNames: string[], ruleSetting: StyleRuleSetting, cssOption: CssOption, showStyleTaskResult: boolean, colorAliasMap: {[index:string]: string}): StyleInfo[] => {
     return missingClassNames.map((classExpr: string): StyleInfo => {
-        const {units, colors, styles, warnings, classNames} = makeCssForExpr(classExpr, ruleSetting, cssOption)
+        const {units, colors, styles, warnings, classNames} = makeCssForExpr(classExpr, ruleSetting, cssOption, colorAliasMap)
 
         if (showStyleTaskResult) {
             const order = "".padStart(12, " ")

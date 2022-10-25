@@ -541,7 +541,7 @@ export const batchCountPromise = <T>(handler: (task: T, config: WxRunningConfig)
 export const generateContent = (config: WxRunningConfig) => async (classNames: string[]): Promise<StyleInfo[]> => {
     log(`[data] new task to create [ ${Colors.cyan(classNames.length.toString())} ] class names`)
     return style.generateStyleContents(classNames, await getRuleSetting(config), config.cssOption,
-        config.debugOption.showStyleTaskResult);
+        config.debugOption.showStyleTaskResult, (await getThemeMap(config)).colorAliasMap);
 }
 
 export const saveContent = (config: WxRunningConfig) => async (classResultList: StyleInfo[]): Promise<number> => {
@@ -577,10 +577,8 @@ export const saveContent = (config: WxRunningConfig) => async (classResultList: 
     log(`[task] save ${Colors.cyan(varsContent.length.toString())} chars to ${config.fileStructure.cssVarFile}`)
 
     let styleContent = classResultList.map((m: StyleInfo) => m.styles).flat().join("")
-    if (config.cssOption.varPrefix) {
-        styleContent = styleContent.replace(/--color-/g, `--${config.cssOption.varPrefix}color-`)
-        styleContent = styleContent.replace(/--unit-/g, `--${config.cssOption.varPrefix}unit-`)
-    }
+        styleContent = styleContent.replace(/--color-/g, `--${config.cssOption.varPrefix}${config.cssOption.varColorPrefix}`)
+        styleContent = styleContent.replace(/--unit-/g, `--${config.cssOption.varPrefix}${config.cssOption.varUnitPrefix}`)
     if (config.cssOption.minify) {
         styleContent = styleContent.replace(/\s+/g, "").replace(/;}/g, "}")
     }

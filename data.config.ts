@@ -154,6 +154,14 @@ export interface CssOption {
      */
     varPrefix: string;
     /**
+     * color variable prefix
+     */
+    varColorPrefix: string;
+    /**
+     * unit variable prefix
+     */
+    varUnitPrefix: string;
+    /**
      * flag if minify
      */
     minify: boolean;
