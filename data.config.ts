@@ -276,6 +276,11 @@ export interface WxRunningConfig {
     configSource: string
 
     /**
+     * is windows
+     */
+    isWindows: boolean
+
+    /**
      * working dir, default value is ".", should detect if contains correct contents
      */
     workDir: string

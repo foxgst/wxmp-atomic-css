@@ -5,8 +5,8 @@ import {OptionalRunningConfig, WxRunningConfig} from "./data.config.ts";
 import * as wx from "./mod.wx.ts";
 
 const fullBuild = (config: WxRunningConfig): Promise<number> => {
-    log("[task] start auto generation after started");
     const time = timing()
+    log("[task] start auto generation after started")
     return Promise.all([
         wx.parseGlobalStyleNames(config),
         wx.parseMiniProgramPages(config).then(wx.batchPromise(wx.parsePageClassNames, config)),
@@ -15,19 +15,6 @@ const fullBuild = (config: WxRunningConfig): Promise<number> => {
         .then(wx.generateContent(config))
         .then(wx.saveContent(config))
         .then(wx.finishAndPrintCostTime(config, time))
-        .then(() => log("service ready, Press Ctrl-C to exit"))
-        .catch(printError(time))
-}
-
-
-const count = (config: WxRunningConfig): Promise<number> => {
-    log("[task] start auto generation after started");
-    const time = timing()
-    return Promise.all([
-        wx.parseGlobalStyleNames(config),
-        wx.parseMiniProgramPages(config).then(wx.batchCountPromise(wx.countPageClassNames, config)),
-        wx.parseComponentPages(config).then(wx.batchCountPromise(wx.countComponentClassNames, config)),
-    ]).then(wx.countTargetClassNames(config, "result.md"))
         .catch(printError(time))
 }
 
@@ -37,6 +24,17 @@ const partiallyUpdate = (config: WxRunningConfig, fileEvents: string[]): Promise
         .then(wx.generateContent(config))
         .then(wx.saveContent(config))
         .then(wx.finishAndPrintCostTime(config, time))
+        .catch(printError(time))
+}
+
+const countClassNames = (outputFilePath: string) => (config: WxRunningConfig) => {
+    log("[task] start generating report...");
+    const time = timing()
+    Promise.all([
+        wx.parseGlobalStyleNames(config),
+        wx.parseMiniProgramPages(config).then(wx.batchCountPromise(wx.countPageClassNames, config)),
+        wx.parseComponentPages(config).then(wx.batchCountPromise(wx.countComponentClassNames, config)),
+    ]).then(wx.countTargetClassNames(config, outputFilePath))
         .catch(printError(time))
 }
 
@@ -57,10 +55,9 @@ const partiallyUpdate = (config: WxRunningConfig, fileEvents: string[]): Promise
     } as OptionalRunningConfig)
         .then(wx.ensureWorkDir)
         .then(wx.printRunningConfig)
-        .then((config: WxRunningConfig) =>
-            wx.executeCommand(config, {
-                "count": count,
-                "default": () => fullBuild(config).then(() => wx.watchMiniProgramPageChange(config, partiallyUpdate))
-            }))
+        .then(wx.executeCommands({
+            "count": countClassNames("report.md"),
+            "default": (config) => fullBuild(config).then(() => wx.watchPageChanges(config, partiallyUpdate))
+        }))
         .catch((e: unknown) => log(e))
 })()

@@ -37,7 +37,7 @@ export type KeySortedArrayMap<Type> = {
 /**
  * count map with sorted keys
  */
-export type CountArrayMap<Type> = {
+export type CountArrayMap = {
     keys: string[];
     map: { [key: string]: number };
 };
@@ -63,8 +63,8 @@ export const arrayMap = <Type>(elementArray: Type[], keyFunction: (a: Type) => s
  * @param elementArray element array
  * @param keyFunction key generator function
  */
-export const arrayCount = <Type>(elementArray: Type[], keyFunction: (a: Type) => string): CountArrayMap<Type> =>
-    elementArray.reduce((groupMap: KeySortedArrayMap<Type>, element: Type) => {
+export const arrayCount = <Type>(elementArray: Type[], keyFunction: (a: Type) => string): CountArrayMap =>
+    elementArray.reduce((groupMap: CountArrayMap, element: Type) => {
         const key = keyFunction(element)
         if (groupMap.keys.indexOf(key) == -1) {
             groupMap.keys.push(key)
@@ -134,12 +134,10 @@ export const readDataFile = <Type>(filePath: string): Promise<Type> => {
         return fetch(filePath)
             .then((response) => response.json())
             .then((json) => json as Type)
-            .catch((e: unknown) => log("filePath", filePath, e));
     }
     return Deno.readTextFile(filePath)
         .then((response) => JSON.parse(response))
         .then((json) => json as Type)
-        .catch((e: unknown) => log("filePath", filePath, e));
 }
 
 export type PropertyOptional<Type> = {
@@ -150,7 +148,7 @@ export const isAbsolutePath = (filePath: string): boolean => {
     return filePath.startsWith("http") || filePath.startsWith("/") || filePath.includes(":")
 }
 
-export const getScriptParentPath = (scriptPath: string = undefined) => {
+export const getScriptParentPath = (scriptPath?: string) => {
     if (scriptPath == undefined) {
         scriptPath = new URL(import.meta.url).toString()
     }
@@ -159,7 +157,7 @@ export const getScriptParentPath = (scriptPath: string = undefined) => {
     }
     if (scriptPath.startsWith("/") || scriptPath.includes(":")) {
         const isWindows = Deno.build.os === "windows";
-        scriptPath = scriptPath.replace("file:///", "")
+        scriptPath = scriptPath.replace(isWindows ? "file:///" : "file://", "")
         return scriptPath.substring(0, scriptPath.lastIndexOf("/")).replaceAll("/", isWindows ? "\\" : "/")
     }
     return "."
